@@ -1,7 +1,7 @@
 DiffMatcher
 ===
 
-[![build status](http://travis-ci.org/playup/diff_matcher.png)](http://travis-ci.org/playup/diff_matcher)
+[![build status](http://travis-ci.org/playupchris/diff_matcher.png)](http://travis-ci.org/playupchris/diff_matcher)
 
 Generates a diff by matching against expected values, classes, regexes and/or procs.
 
@@ -143,6 +143,8 @@ Using the `:default` colour scheme items shown in a difference are coloured as f
     match class   => blue
     match proc    => cyan
 
+
+`:color_scheme=>:white_background` shows difference as follows
 
 ``` ruby
     puts DiffMatcher::difference(
