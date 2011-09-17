@@ -17,7 +17,8 @@ end
 describe DiffMatcher do
   subject { DiffMatcher::difference(expected, actual, opts) }
 
-  shared_examples_for "a differ" do |expected, same, different, difference="", opts={}|
+  shared_examples_for "a differ" do |expected, same, different, difference, opts|
+    opts ||= {}
     context "with #{opts.size > 0 ? opts_to_s(opts) : "no opts"}" do
       describe "difference(#{expected.inspect}, #{same.inspect}#{opts_to_s(opts)})" do
         let(:expected) { expected }
