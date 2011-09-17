@@ -18,7 +18,7 @@ Values in a containing object match when:
 Installation
 ---
 
-  gem install diff_matcher
+    gem install diff_matcher
 
 
 Usage
@@ -122,6 +122,15 @@ Using the `:default` colour scheme items shown in a difference are coloured as f
     match proc    => cyan
 
 
+    puts DiffMatcher::difference(
+      { :a=>{ :a1=>11          }, :b=>[ 21, 22 ], :c=>/\d/, :d=>Fixnum, :e=>lambda { |x| (4..6).includes? x },
+      { :a=>{ :a1=>10, :a2=>12 }, :b=>[ 21     ], :c=>'3' , :d=>4     , :e=>5                               },
+      :verbose=>true, :color_scheme=>:white_background
+    )
+
+![example output](https://raw.github.com/playup/diff_matcher/master/doc/example_output.png)
+
+
 Similar gems
 ---
 
@@ -164,5 +173,6 @@ Status
 ---
 
 Our company is using this gem to test our JSON API which has got it to a stable v1.0.0 release.
-There's a [pull request](http://github.com/rspec/rspec-expectations/pull/79) to use this code in `be_hash_matching` 
+
+There's a [pull request](http://github.com/rspec/rspec-expectations/pull/79) to use this gem in a `be_hash_matching` 
 [rspec matcher](https://www.relishapp.com/rspec/rspec-expectations).
