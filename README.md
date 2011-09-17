@@ -24,78 +24,100 @@ Installation
 Usage
 ---
 
-    require 'diff_matcher'
-    
-    DiffMatcher::difference(actual, expected, opts={})
+``` ruby
+require 'diff_matcher'
+
+DiffMatcher::difference(actual, expected, opts={})
+```
 
 When `expected` != `actual`
 
-    puts DiffMatcher::difference(1, 2)
-    # => - 1+ 2
-    # => Where, - 1 missing, + 1 additional
+``` ruby
+puts DiffMatcher::difference(1, 2)
+# => - 1+ 2
+# => Where, - 1 missing, + 1 additional
+```
 
 When `expected` == `actual`
 
-    p DiffMatcher::difference(1, 1)
-    # => nil
+``` ruby
+p DiffMatcher::difference(1, 1)
+# => nil
+```
 
 When `actual` is an instance of the `expected`
 
-    p DiffMatcher::difference(String, '1')
-    # => nil
+``` ruby
+p DiffMatcher::difference(String, '1')
+# => nil
+```
 
 When `actual` is a string that matches the `expected` regex
 
-    p DiffMatcher::difference(/[a-z]/, "a")
-    # => nil
+``` ruby
+p DiffMatcher::difference(/[a-z]/, "a")
+# => nil
+```
 
 When `actual` is passed to an `expected` proc and it returns true
 
-    is_boolean = lambda { |x| [FalseClass, TrueClass].include? x.class }
-    p DiffMatcher::difference(is_boolean, true)
-    # => nil
+``` ruby
+is_boolean = lambda { |x| [FalseClass, TrueClass].include? x.class }
+p DiffMatcher::difference(is_boolean, true)
+# => nil
+```
 
 When `actual` is missing one of the `expected` values
 
-    puts DiffMatcher::difference([1, 2], [1])
-    # => [
-    # => - 2
-    # => ]
-    # => Where, - 1 missing
+``` ruby
+puts DiffMatcher::difference([1, 2], [1])
+# => [
+# => - 2
+# => ]
+# => Where, - 1 missing
+```
 
 When `actual` has additional values to the `expected`
 
-    puts DiffMatcher::difference([1], [1, 2])
-    # => [
-    # => + 2
-    # => ]
-    # => Where, - 1 additional
+``` ruby
+puts DiffMatcher::difference([1], [1, 2])
+# => [
+# => + 2
+# => ]
+# => Where, - 1 additional
+```
 
 ### Options
 
 `:ignore_additional=>true` will match even if `actual` has additional items
 
-    p DiffMatcher::difference([1], [1, 2], :ignore_additional=>true)
-    # => nil
+``` ruby
+p DiffMatcher::difference([1], [1, 2], :ignore_additional=>true)
+# => nil
+```
 
 `:verbose=>true` shows only missing and additional items in the output
 
-    puts DiffMatcher::difference([Fixnum, 2], [1], :quiet=>true)
-    # => [
-    # => - 2
-    # => ]
-    # => Where, - 1 missing
+``` ruby
+puts DiffMatcher::difference([Fixnum, 2], [1], :quiet=>true)
+# => [
+# => - 2
+# => ]
+# => Where, - 1 missing
+```
 
 `:verbose=>true` shows all matched items in the output
 
-    puts DiffMatcher::difference([Fixnum, 2], [1], :verbose=>true)
-    # => [
-    # = >  : 1,
-    # => - 2
-    # => ]
-    # => Where, - 1 missing, : 1 match_class
+``` ruby
+puts DiffMatcher::difference([Fixnum, 2], [1], :verbose=>true)
+# => [
+# = >  : 1,
+# => - 2
+# => ]
+# => Where, - 1 missing, : 1 match_class
+```
 
-#### prefixes
+#### Prefixes
 
 NB. The `: 1` from above includes a `:` prefix that shows the `1` was matched against a class (ie. `Fixnum`)
 
@@ -108,7 +130,7 @@ The items shown in a difference are prefixed as follows:
     match class   => ": "
     match proc    => "{ "
 
-#### colours
+#### Colours
 
 Colours (defined in colour schemes) can also appear in the difference.
 
@@ -122,11 +144,13 @@ Using the `:default` colour scheme items shown in a difference are coloured as f
     match proc    => cyan
 
 
+``` ruby
     puts DiffMatcher::difference(
       { :a=>{ :a1=>11          }, :b=>[ 21, 22 ], :c=>/\d/, :d=>Fixnum, :e=>lambda { |x| (4..6).includes? x },
       { :a=>{ :a1=>10, :a2=>12 }, :b=>[ 21     ], :c=>'3' , :d=>4     , :e=>5                               },
       :verbose=>true, :color_scheme=>:white_background
     )
+```
 
 ![example output](https://raw.github.com/playup/diff_matcher/master/doc/example_output.png)
 
