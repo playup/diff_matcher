@@ -1,11 +1,11 @@
 source "http://rubygems.org"
 
-gemspec
+#gemspec
 
-group :test do
-  gem "rake"
-  gem "rspec" #, "~> 2.0.1"
+gem "rake" , "~> 0.9"
+gem "rspec", "~> 2.6.0"
 
+group :development do
   platforms :mri_19 do
     gem "simplecov"
   end
