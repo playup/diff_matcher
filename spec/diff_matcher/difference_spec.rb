@@ -1,7 +1,5 @@
 require "spec_helper"
 
-RUBY_1_9 = (RUBY_VERSION =~ /^1\.9/)
-
 def opts_to_s(opts)
   opts_strs = opts.map { |k,v| ":#{k}=>#{v}" if v }.compact
   opts_strs.size > 0 ? ", " + opts_strs * ", " : ""
@@ -51,7 +49,7 @@ describe DiffMatcher do
         2
 
       it_behaves_like "a differ", expected, same, different,
-        <<-EOF
+        <<-EOF, {}
         - 1+ 2
         Where, - 1 missing, + 1 additional
         EOF
@@ -64,7 +62,7 @@ describe DiffMatcher do
         "b"
 
       it_behaves_like "a differ", expected, same, different,
-        <<-EOF
+        <<-EOF, {}
         - "a"+ "b"
         Where, - 1 missing, + 1 additional
         EOF
@@ -73,7 +71,7 @@ describe DiffMatcher do
         different = 0
 
         it_behaves_like "a differ", expected, same, different,
-          <<-EOF
+          <<-EOF, {}
           - "a"+ 0
           Where, - 1 missing, + 1 additional
           EOF
@@ -83,7 +81,7 @@ describe DiffMatcher do
         different = nil
 
         it_behaves_like "a differ", expected, same, different,
-          <<-EOF
+          <<-EOF, {}
           - "a"+ nil
           Where, - 1 missing, + 1 additional
           EOF
@@ -97,7 +95,7 @@ describe DiffMatcher do
         false
 
       it_behaves_like "a differ", expected, same, different,
-        <<-EOF
+        <<-EOF, {}
         - nil+ false
         Where, - 1 missing, + 1 additional
         EOF
@@ -110,7 +108,7 @@ describe DiffMatcher do
         [ 2 ]
 
       it_behaves_like "a differ", expected, same, different,
-        <<-EOF
+        <<-EOF, {}
         [
           - 1+ 2
         ]
@@ -158,7 +156,7 @@ describe DiffMatcher do
           [ 1, 2    ]
 
         it_behaves_like "a differ", expected, same, different,
-          <<-EOF
+          <<-EOF, {}
           [
           - 3
           ]
@@ -184,7 +182,7 @@ describe DiffMatcher do
         { "a"=>2 }
 
       it_behaves_like "a differ", expected, same, different,
-        <<-EOF
+        <<-EOF, {}
         {
           "a"=>- 1+ 2
         }
@@ -198,7 +196,7 @@ describe DiffMatcher do
           { "a"=>[ "b", 1 ] }
 
         it_behaves_like "a differ", expected, same, different,
-          <<-EOF
+          <<-EOF, {}
           {
             "a"=>- {"b"=>1}+ ["b", 1]
           }
@@ -214,7 +212,7 @@ describe DiffMatcher do
 
         describe "it won't match the descendents" do
           it_behaves_like "a differ", expected, same, different,
-            <<-EOF
+            <<-EOF, {}
             {
             - "a"=>{"b"=>{"c"=>1}},
             + "b"=>{"c"=>1}
@@ -234,7 +232,7 @@ describe DiffMatcher do
         1
 
       it_behaves_like "a differ", expected, same, different,
-        <<-EOF
+        <<-EOF, {}
         - String+ 1
         Where, - 1 missing, + 1 additional
         EOF
@@ -249,7 +247,7 @@ describe DiffMatcher do
         "A"
 
       it_behaves_like "a differ", expected, same, different,
-        <<-EOF
+        <<-EOF, {}
         - /[a-z]/+ "A"
         Where, - 1 missing, + 1 additional
         EOF
@@ -258,7 +256,7 @@ describe DiffMatcher do
         different = :a
 
         it_behaves_like "a differ", expected, same, different,
-          <<-EOF
+          <<-EOF, {}
           - /[a-z]/+ :a
           Where, - 1 missing, + 1 additional
           EOF
@@ -286,7 +284,7 @@ describe DiffMatcher do
 
     describe "it shows regex, class, proc matches and" do
       it_behaves_like "a differ", expected, same, different,
-        <<-EOF
+        <<-EOF, {}
         [
           - 1+ 0,
           ~ (3),

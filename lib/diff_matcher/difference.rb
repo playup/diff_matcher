@@ -49,7 +49,7 @@ module DiffMatcher
     def matching?
       @match ||= @difference ? item_types.map { |item_type|
         @color_scheme[item_type]
-      }.reduce(0) { |count, (color, prefix)|
+      }.inject(0) { |count, (color, prefix)|
         count + @difference.scan("#{color}#{prefix}").size
       } == 0 : true
     end
@@ -101,7 +101,7 @@ module DiffMatcher
         right = diff(actual, expected)
         items_to_s(
           expected,
-          (item_types_shown).reduce([]) { |a, method|
+          (item_types_shown).inject([]) { |a, method|
             a + send(method, left, right, expected.class).compact.map { |item| markup(method, item) }
           }
         )
@@ -112,11 +112,11 @@ module DiffMatcher
 
     def diff(expected, actual, reverse=false)
       if expected.is_a?(Hash)
-        expected.keys.reduce({}) { |h, k|
+        expected.keys.inject({}) { |h, k|
           h.update(k => actual.has_key?(k) ? difference(actual[k], expected[k], reverse) : expected[k])
         }
       elsif expected.is_a?(Array)
-        expected, actual = [expected, actual].map { |x| x.each_with_index.reduce({}) { |h, (v, i)| h.update(i=>v) } }
+        expected, actual = [expected, actual].map { |x| x.each_with_index.inject({}) { |h, (v, i)| h.update(i=>v) } }
         #diff(expected, actual, reverse)  # XXX - is there a test case for this?
         diff(expected, actual)
       else

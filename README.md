@@ -1,7 +1,7 @@
 DiffMatcher
 ===
 
-[![build status](http://travis-ci.org/playupchris/diff_matcher.png)](http://travis-ci.org/playupchris/diff_matcher)
+[![build status](http://travis-ci.org/playup/diff_matcher.png)](http://travis-ci.org/playup/diff_matcher)
 
 Generates a diff by matching against expected values, classes, regexes and/or procs.
 
