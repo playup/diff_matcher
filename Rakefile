@@ -1,6 +1,8 @@
-require 'bundler'
-
-Bundler::GemHelper.install_tasks
+RUBY_1_9 = (RUBY_VERSION =~ /^1\.9/)
+if RUBY_1_9
+  require 'bundler'
+  Bundler::GemHelper.install_tasks
+end
 
 require "rspec/core/rake_task"
 
