@@ -10,11 +10,12 @@ DiffMatcher performs recursive matches on values contained in hashes, arrays and
 
 Values in a containing object match when:
 
-    - actual == expected
-    - actual.is_a? expected  # when expected is a class
-    - expected.match actual  # when expected is a regexp
-    - expected.call actual   # when expected is a proc
-
+``` ruby
+actual == expected
+actual.is_a? expected  # when expected is a class
+expected.match actual  # when expected is a regexp
+expected.call actual   # when expected is a proc
+```
 
 Installation
 ---
@@ -85,7 +86,7 @@ puts DiffMatcher::difference([1], [1, 2])
 # => [
 # => + 2
 # => ]
-# => Where, - 1 additional
+# => Where, + 1 additional
 ```
 
 ### Options
