@@ -40,7 +40,6 @@ module DiffMatcher
     def initialize(expected, actual, opts={})
       @ignore_additional = opts[:ignore_additional]
       @quiet             = opts[:quiet]
-      @verbose           = opts[:verbose]
       @color_enabled     = opts[:color_enabled] || !!opts[:color_scheme]
       @color_scheme      = COLOR_SCHEMES[opts[:color_scheme] || :default]
       @difference = difference(expected, actual)
@@ -89,7 +88,7 @@ module DiffMatcher
         ret = []
         unless @quiet
           ret += [:match_class, :match_proc, :match_regexp]
-          ret += [:match_value] if @verbose
+          ret += [:match_value]
         end
         ret
       }.call

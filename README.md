@@ -11,11 +11,14 @@ DiffMatcher performs recursive matches on values contained in hashes, arrays and
 Values in a containing object match when:
 
 ``` ruby
-actual == expected
 actual.is_a? expected  # when expected is a class
 expected.match actual  # when expected is a regexp
 expected.call actual   # when expected is a proc
+actual == expected     # when expected is anything else
 ```
+
+![example output](https://raw.github.com/playup/diff_matcher/master/doc/diff_matcher_1.gif)
+
 
 Installation
 ---
@@ -98,7 +101,7 @@ p DiffMatcher::difference([1], [1, 2], :ignore_additional=>true)
 # => nil
 ```
 
-`:verbose=>true` shows only missing and additional items in the output
+`:quiet=>true` shows only missing and additional items in the output
 
 ``` ruby
 puts DiffMatcher::difference([Fixnum, 2], [1], :quiet=>true)
@@ -106,17 +109,6 @@ puts DiffMatcher::difference([Fixnum, 2], [1], :quiet=>true)
 # => - 2
 # => ]
 # => Where, - 1 missing
-```
-
-`:verbose=>true` shows all matched items in the output
-
-``` ruby
-puts DiffMatcher::difference([Fixnum, 2], [1], :verbose=>true)
-# => [
-# = >  : 1,
-# => - 2
-# => ]
-# => Where, - 1 missing, : 1 match_class
 ```
 
 #### Prefixes
@@ -150,13 +142,11 @@ Using the `:default` colour scheme items shown in a difference are coloured as f
 
 ``` ruby
     puts DiffMatcher::difference(
-      { :a=>{ :a1=>11          }, :b=>[ 21, 22 ], :c=>/\d/, :d=>Fixnum, :e=>lambda { |x| (4..6).includes? x },
-      { :a=>{ :a1=>10, :a2=>12 }, :b=>[ 21     ], :c=>'3' , :d=>4     , :e=>5                               },
-      :verbose=>true, :color_scheme=>:white_background
+      { :a=>{ :a1=>11          }, :b=>[ 21, 22 ], :c=>/\d/, :d=>Fixnum, :e=>lambda { |x| (4..6).include? x } },
+      { :a=>{ :a1=>10, :a2=>12 }, :b=>[ 21     ], :c=>'3' , :d=>4     , :e=>5                                },
+      :color_scheme=>:white_background
     )
 ```
-
-![example output](https://raw.github.com/playup/diff_matcher/master/doc/example_output.png)
 
 
 Similar gems
