@@ -17,7 +17,7 @@ expected.call actual   # when expected is a proc
 actual == expected     # when expected is anything else
 ```
 
-![example output](https://raw.github.com/playup/diff_matcher/master/doc/diff_matcher_1.gif)
+![example output](https://raw.github.com/playup/diff_matcher/master/doc/diff_matcher.gif)
 
 
 Installation
