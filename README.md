@@ -17,6 +17,16 @@ expected.call actual   # when expected is a proc
 actual == expected     # when expected is anything else
 ```
 
+Example:
+
+``` ruby
+    puts DiffMatcher::difference(
+      { :a=>{ :a1=>11          }, :b=>[ 21, 22 ], :c=>/\d/, :d=>Fixnum, :e=>lambda { |x| (4..6).include? x } },
+      { :a=>{ :a1=>10, :a2=>12 }, :b=>[ 21     ], :c=>'3' , :d=>4     , :e=>5                                },
+      :color_scheme=>:white_background
+    )
+```
+
 ![example output](https://raw.github.com/playup/diff_matcher/master/doc/diff_matcher.gif)
 
 
@@ -113,8 +123,6 @@ puts DiffMatcher::difference([Fixnum, 2], [1], :quiet=>true)
 
 #### Prefixes
 
-NB. The `: 1` from above includes a `:` prefix that shows the `1` was matched against a class (ie. `Fixnum`)
-
 The items shown in a difference are prefixed as follows:
 
     missing       => "- "
@@ -123,6 +131,7 @@ The items shown in a difference are prefixed as follows:
     match regexp  => "~ "
     match class   => ": "
     match proc    => "{ "
+
 
 #### Colours
 
@@ -137,17 +146,9 @@ Using the `:default` colour scheme items shown in a difference are coloured as f
     match class   => blue
     match proc    => cyan
 
+Other colour schemes, eg. `:color_scheme=>:white_background` will use different colour mappings.
 
-`:color_scheme=>:white_background` shows difference as follows
-
-``` ruby
-    puts DiffMatcher::difference(
-      { :a=>{ :a1=>11          }, :b=>[ 21, 22 ], :c=>/\d/, :d=>Fixnum, :e=>lambda { |x| (4..6).include? x } },
-      { :a=>{ :a1=>10, :a2=>12 }, :b=>[ 21     ], :c=>'3' , :d=>4     , :e=>5                                },
-      :color_scheme=>:white_background
-    )
-```
-
+  
 
 Similar gems
 ---
