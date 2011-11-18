@@ -121,6 +121,18 @@ puts DiffMatcher::difference([Fixnum, 2], [1], :quiet=>true)
 # => Where, - 1 missing
 ```
 
+`:underline=>true` underlines matches (handy when colour is disabled)
+
+    [
+    __-_1+_0,
+      2,
+    __~_(3),
+    __:_4,
+    __{_5
+    ]
+    Where, - 1 missing, + 1 additional, ~ 1 match_regexp, : 1 match_class, { 1 match_proc
+
+
 #### Prefixes
 
 The items shown in a difference are prefixed as follows:

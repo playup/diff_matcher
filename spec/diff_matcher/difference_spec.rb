@@ -311,6 +311,21 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
         EOF
     end
 
+    describe "it underlines all regex, class and proc matches" do
+      it_behaves_like "a diff matcher", expected, same, different,
+        <<-EOF, :underline=>true
+        [
+        __-_1+_0,
+          2,
+        __~_(3),
+        __:_4,
+        __{_5
+        ]
+        Where, - 1 missing, + 1 additional, ~ 1 match_regexp, : 1 match_class, { 1 match_proc
+        EOF
+    end
+
+
     describe "it shows matches in color" do
       it_behaves_like "a diff matcher", expected, same, different,
         <<-EOF , :color_scheme=>:default

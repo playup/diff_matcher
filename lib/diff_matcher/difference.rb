@@ -40,6 +40,7 @@ module DiffMatcher
     def initialize(expected, actual, opts={})
       @ignore_additional = opts[:ignore_additional]
       @quiet             = opts[:quiet]
+      @underline         = opts[:underline]
       @color_enabled     = opts[:color_enabled] || !!opts[:color_scheme]
       @color_scheme      = COLOR_SCHEMES[opts[:color_scheme] || :default]
       @difference = difference(expected, actual)
@@ -55,17 +56,20 @@ module DiffMatcher
 
     def to_s
       if @difference
-        msg = "\e[0m" + @difference.split("\n").join("\n\e[0m")
+        s = "\e[0m" + @difference.split("\n").join("\n\e[0m")
+
+        s.gsub!(/([ ]+)\e\[\d+m/) { |x| x.gsub(' ', '_') } if @underline
+
         where = @color_scheme.keys.collect { |item_type|
           unless item_type == :match_value
             color, prefix = @color_scheme[item_type]
-            count = msg.scan("#{color}#{prefix}").size
+            count = s.scan("#{color}#{prefix}").size
             "#{color}#{prefix} #{BOLD}#{count} #{item_type}#{RESET}" if count > 0
           end
         }.compact.join(", ")
-        msg <<  "\nWhere, #{where}" if where.size > 0
+        s <<  "\nWhere, #{where}" if where.size > 0
 
-        @color_enabled ? msg : msg.gsub(/\e\[\d+m/, "")
+        @color_enabled ? s : s.gsub(/\e\[\d+m/, "")
       end
     end
 
