@@ -137,13 +137,13 @@ module DiffMatcher
       compare(right, expected_class, difference_to_s(right, left)) { |k|
         "#{"#{k.inspect}=>" if expected_class == Hash}#{right[k]}" if right[k] and left.has_key?(k)
       }
-   end
+    end
 
     def missing(left, right, expected_class)
       compare(left, expected_class) { |k|
         "#{"#{k.inspect}=>" if expected_class == Hash}#{left[k].inspect}" unless right.has_key?(k)
       }
-   end
+    end
 
     def additional(left, right, expected_class)
       missing(right, left, expected_class)
@@ -175,11 +175,11 @@ module DiffMatcher
 
     def match_to_s(expected, actual, match_type)
       actual = match_regexp_to_s(expected, actual) if match_type == :match_regexp
-      markup(match_type, actual) if matches_shown.include? match_type
+      markup(match_type, actual) if matches_shown.include?(match_type)
     end
 
     def difference_to_s(expected, actual, reverse=false)
-      match, match_type = match? *(reverse ? [actual, expected] : [expected, actual])
+      match, match_type = match?(*(reverse ? [actual, expected] : [expected, actual]))
       if match
         match_to_s(expected, actual, match_type)
       else
