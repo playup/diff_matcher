@@ -87,6 +87,7 @@ When `actual` is missing one of the `expected` values
 ``` ruby
 puts DiffMatcher::difference([1, 2], [1])
 # => [
+# =>   1
 # => - 2
 # => ]
 # => Where, - 1 missing
@@ -97,6 +98,7 @@ When `actual` has additional values to the `expected`
 ``` ruby
 puts DiffMatcher::difference([1], [1, 2])
 # => [
+# =>   1
 # => + 2
 # => ]
 # => Where, + 1 additional
