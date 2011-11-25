@@ -57,14 +57,15 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
 
     context "of String," do
       expected, same, different =
-        "a",
-        "a",
-        "b"
+        "Happy Birthday to you\nHappy Birthday to you\nHappy Birthday dear rspec\nHappy Birthday to you",
+        "Happy Birthday to you\nHappy Birthday to you\nHappy Birthday dear rspec\nHappy Birthday to you",
+        "Happy Birthday to you\nHappy Birthday to you\nHappy Birthday dear ruby\nHappy Birthday to you"
 
       it_behaves_like "a diff matcher", expected, same, different,
-        <<-EOF, {}
-        - "a"+ "b"
-        Where, - 1 missing, + 1 additional
+        <<-EOF, :color_enabled=>true
+        \e[0mHappy Birthday \e[31m- \e[1mto\e[0m\e[33m+ \e[1mfor\e[0m you
+
+        Where, \e[31m- \e[1m1 missing\e[0m, \e[33m+ \e[1m1 additional\e[0m
         EOF
 
       context "when actual is of a different class" do
@@ -72,7 +73,7 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
 
         it_behaves_like "a diff matcher", expected, same, different,
           <<-EOF, {}
-          - "a"+ 0
+          - "Happy Birthday to you"+ 0
           Where, - 1 missing, + 1 additional
           EOF
       end
@@ -82,7 +83,7 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
 
         it_behaves_like "a diff matcher", expected, same, different,
           <<-EOF, {}
-          - "a"+ nil
+          - "Happy Birthday to you"+ nil
           Where, - 1 missing, + 1 additional
           EOF
       end

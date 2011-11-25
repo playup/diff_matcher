@@ -101,7 +101,7 @@ module DiffMatcher
         items_to_s(
           expected,
           (item_types_shown).inject([]) { |a, method|
-            a + send(method, left, right, expected.class).compact.map { |item| markup(method, item) }
+            a + send(method, left, right, expected.class).compact.map { |item| markup(method, item, expected.class) }
           }
         )
       else
@@ -118,13 +118,16 @@ module DiffMatcher
         expected, actual = [expected, actual].map { |x| x.each_with_index.inject({}) { |h, (v, i)| h.update(i=>v) } }
         #diff(expected, actual, reverse)  # XXX - is there a test case for this?
         diff(expected, actual)
+      elsif expected.is_a?(String)
+        expected, actual = [expected, actual].map { |x| x.codepoints.to_a.each_with_index.inject({}) { |h, (v, i)| h.update(i=>v) } }
+        diff(expected, actual)
       else
         actual
       end if expected.is_a? actual.class
     end
 
     def compare(right, expected_class, default=nil)
-      if [Hash, Array].include? expected_class
+      if [Hash, Array, String].include? expected_class
         right && right.keys.tap { |keys| keys.sort if expected_class == Array }.map { |k|
           yield k
         }
@@ -162,6 +165,7 @@ module DiffMatcher
       case expected
         when Hash ; "{\n#{items.join(",\n")}\n}\n"
         when Array; "[\n#{items.join(",\n")}\n]\n"
+        when String; items.map(&:to_s).map { |c| c.sub(/^[ ][ ]/, '') }.join
         else items.join.strip
       end if items.size > 0
     end
@@ -175,7 +179,7 @@ module DiffMatcher
 
     def match_to_s(expected, actual, match_type)
       actual = match_regexp_to_s(expected, actual) if match_type == :match_regexp
-      markup(match_type, actual) if matches_shown.include?(match_type)
+      markup(match_type, actual, expected.class) if matches_shown.include?(match_type)
     end
 
     def difference_to_s(expected, actual, reverse=false)
@@ -183,13 +187,17 @@ module DiffMatcher
       if match
         match_to_s(expected, actual, match_type)
       else
-        "#{markup(:missing, expected.inspect)}#{markup(:additional, actual.inspect)}"
+        "#{markup(:missing, expected.inspect, expected.class)}#{markup(:additional, actual.inspect, expected.class)}"
       end
     end
 
-    def markup(item_type, item)
+    def markup(item_type, item, expected_class)
       if item_type == :different
-        item.split("\n").map {|line| "  #{line}"}.join("\n") if item
+        if expected_class == String
+          item.match(/^[0-9]+$/) ? item.to_i.chr : item.gsub(/((?:[^\[m])[0-9]+(?:[^m\e]))+/) { |x| x.to_i.chr }  # XXX - yuk
+        else
+          item.split("\n").map {|line| "  #{line}"}.join("\n")
+        end if item
       else
         color, prefix = @color_scheme[item_type]
         "#{color}#{prefix+' ' if prefix}#{BOLD if color and item_type != :match_regexp}#{RESET if item_type == :match_regexp}#{item}#{RESET if color}" if item
