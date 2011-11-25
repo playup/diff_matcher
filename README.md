@@ -184,6 +184,73 @@ DiffMatcher can match using not only regexes but classes and procs.
 And the difference string that it outputs can be formatted in several ways as needed.
 
 
+Use with rspec
+---
+To use with rspec create the following custom matcher:
+
+``` ruby
+require 'diff_matcher'
+
+module RSpec
+  module Matchers
+    class BeMatching
+      include BaseMatcher
+
+      def initialize(expected, opts)
+        @expected = expected
+        @opts = opts.update(:color_enabled=>RSpec::configuration.color_enabled?)
+      end
+
+      def matches?(actual)
+        @difference = DiffMatcher::Difference.new(expected, actual, @opts)
+        @difference.matching?
+      end
+
+      def failure_message_for_should
+        @difference.to_s
+      end
+    end
+
+    def be_matching(expected, opts={})
+      Matchers::BeMatching.new(expected, opts)
+    end
+  end
+end
+```
+
+And use it with:
+
+``` ruby
+describe "hash matcher" do
+  subject { { :a=>1, :b=>2, :c=>'3', :d=>4, :e=>"additional stuff" } }
+  let(:expected) { { :a=>1, :b=>Fixnum, :c=>/[0-9]/, :d=>lambda { |x| (3..5).include?(x) } } }
+
+  it { should be_matching(expected, :ignore_additional=>true) }
+  it { should be_matching(expected) }
+end
+```
+
+Will result in:
+```
+  Failures:
+
+    1) hash matcher
+       Failure/Error: it { should be_matching(expected) }
+         {
+           :a=>1,
+           :b=>: 2,
+           :c=>~ (3),
+           :d=>{ 4,
+         + :e=>"additional stuff"
+         }
+         Where, + 1 additional, ~ 1 match_regexp, : 1 match_class, { 1 match_proc
+      # ./hash_matcher_spec.rb:6:in `block (2 levels) in <top (required)>'
+
+Finished in 0.00601 seconds
+2 examples, 1 failure
+```
+
+
 Contributing
 ---
 
