@@ -94,9 +94,9 @@ module DiffMatcher
       }.call
     end
 
-    def difference(expected, actual, reverse=false)
+    def difference(expected, actual)
       if actual.is_a? expected.class
-        left = diff(expected, actual, true)
+        left = diff(expected, actual)
         right = diff(actual, expected)
         items_to_s(
           expected,
@@ -105,18 +105,17 @@ module DiffMatcher
           }
         )
       else
-        difference_to_s(expected, actual, reverse)
+        difference_to_s(expected, actual)
       end
     end
 
-    def diff(expected, actual, reverse=false)
+    def diff(expected, actual)
       if expected.is_a?(Hash)
         expected.keys.inject({}) { |h, k|
-          h.update(k => actual.has_key?(k) ? difference(actual[k], expected[k], reverse) : expected[k])
+          h.update(k => actual.has_key?(k) ? difference(actual[k], expected[k]) : expected[k])
         }
       elsif expected.is_a?(Array)
         expected, actual = [expected, actual].map { |x| x.each_with_index.inject({}) { |h, (v, i)| h.update(i=>v) } }
-        #diff(expected, actual, reverse)  # XXX - is there a test case for this?
         diff(expected, actual)
       else
         actual
@@ -178,8 +177,8 @@ module DiffMatcher
       markup(match_type, actual) if matches_shown.include?(match_type)
     end
 
-    def difference_to_s(expected, actual, reverse=false)
-      match, match_type = match?(*(reverse ? [actual, expected] : [expected, actual]))
+    def difference_to_s(expected, actual)
+      match, match_type = match?(expected, actual)
       if match
         match_to_s(expected, actual, match_type)
       else
