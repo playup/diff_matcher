@@ -110,23 +110,25 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
       it_behaves_like "a diff matcher", expected, same, different,
         <<-EOF, {}
         [
-          - 1+ 2
+        - 1+ 2
         ]
         Where, - 1 missing, + 1 additional
         EOF
 
-      context "where actual has additional items" do
+      context "where actual has additional items, using lcs (longest common sequence)" do
         expected, same, different =
-          [ 1, 2    ],
-          [ 1, 2, 3 ],
-          [ 0, 2, 3 ]
+          [ 1, 2,    4, 5 ],
+          [ 1, 2, 3, 4, 5 ],
+          [ 0, 2, 3, 4, 5 ]
 
         it_behaves_like "a diff matcher", expected, same, different,
           <<-EOF, :ignore_additional=>true
           [
-            - 1+ 0,
+          - 1+ 0,
             2,
-          + 3
+          + 3,
+            4,
+            5
           ]
           Where, - 1 missing, + 2 additional
           EOF
@@ -134,35 +136,70 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
         it_behaves_like "a diff matcher", expected, same, different,
           <<-EOF, :ignore_additional=>true, :quiet=>true
           [
-            - 1+ 0
+          - 1+ 0
           ]
           Where, - 1 missing, + 1 additional
           EOF
       end
 
-      context "where actual has missing items" do
+      context "where actual has missing items, using lcs (longest common sequence)" do
         expected, same, different =
-          [ 1, 2, 3 ],
-          [ 1, 2, 3 ],
-          [ 1, 2    ]
+          [ 1, 2, 3, 4, 5 ],
+          [ 1, 2, 3, 4, 5 ],
+          [ 0, 2,    4, 5 ]
 
         it_behaves_like "a diff matcher", expected, same, different,
           <<-EOF, { :quiet => true }
           [
+          - 1+ 0,
           - 3
           ]
-          Where, - 1 missing
+          Where, - 2 missing, + 1 additional
           EOF
 
         it_behaves_like "a diff matcher", expected, same, different,
           <<-EOF
           [
-            1,
+          - 1+ 0,
             2,
-          - 3
+          - 3,
+            4,
+            5
           ]
-          Where, - 1 missing
+          Where, - 2 missing, + 1 additional
           EOF
+
+        context "with nested arrays" do
+          expected, same, different =
+            [ [ 1, 2, 3, 4, 5 ] ],
+            [ [ 1, 2, 3, 4, 5 ] ],
+            [ [ 0, 2,    4, 5 ] ]
+
+          it_behaves_like "a diff matcher", expected, same, different,
+            <<-EOF, { :quiet => true }
+            [
+              [
+              - 1+ 0,
+              - 3
+              ]
+            ]
+            Where, - 2 missing, + 1 additional
+            EOF
+
+          it_behaves_like "a diff matcher", expected, same, different,
+            <<-EOF
+            [
+              [
+              - 1+ 0,
+                2,
+              - 3,
+                4,
+                5
+              ]
+            ]
+            Where, - 2 missing, + 1 additional
+            EOF
+        end
       end
     end
 
@@ -179,6 +216,56 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
         }
         Where, - 1 missing, + 1 additional
         EOF
+
+      context "with missing keys" do
+        expected, same, different =
+          { "a"=>1, "b"=>2, "c"=>3 },
+          { "a"=>1, "b"=>2, "c"=>3 },
+          { "a"=>2,         "c"=>3 }
+
+        it_behaves_like "a diff matcher", expected, same, different,
+          <<-EOF
+          {
+            "a"=>- 1+ 2,
+            "c"=>  3,
+          - "b"=>  2
+          }
+          Where, - 2 missing, + 1 additional
+          EOF
+      end
+
+      context "with a nested array" do
+        expected, same, different =
+          { "a"=>[1, 2, 3] },
+          { "a"=>[1, 2, 3] },
+          { "a"=>[1,    3] }
+
+        it_behaves_like "a diff matcher", expected, same, different,
+          <<-EOF
+          {
+            "a"=>[
+              1,
+            - 2,
+              3
+            ]
+          }
+          Where, - 1 missing
+          EOF
+
+        context "with color enabled" do
+          it_behaves_like "a diff matcher", expected, same, different,
+            <<-EOF, :color_enabled=>true
+            \e[0m{
+            \e[0m  \"a\"=>[
+            \e[0m  \e[0m  \e[1m1\e[0m,
+            \e[0m  \e[31m- \e[1m2\e[0m,
+            \e[0m  \e[0m  \e[1m3\e[0m
+            \e[0m  ]
+            \e[0m}
+            Where, \e[31m- \e[1m1 missing\e[0m
+            EOF
+        end
+      end
 
       context "with keys of differing classes" do
         expected, same, different =
@@ -205,8 +292,8 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
           it_behaves_like "a diff matcher", expected, same, different,
             <<-EOF
             {
-            - "a"=>{"b"=>{"c"=>1}},
-            + "b"=>{"c"=>1}
+            - "a"=>  {"b"=>{"c"=>1}},
+            + "b"=>  {"c"=>1}
             }
             Where, - 1 missing, + 1 additional
             EOF
@@ -277,11 +364,11 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
       it_behaves_like "a diff matcher", expected, same, different,
         <<-EOF
         [
-          - 1+ 0,
+        - 1+ 0,
           2,
-          ~ (3),
-          : 4,
-          { 5
+        ~ (3),
+        : 4,
+        { 5
         ]
         Where, - 1 missing, + 1 additional, ~ 1 match_regexp, : 1 match_class, { 1 match_proc
         EOF
@@ -291,7 +378,7 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
       it_behaves_like "a diff matcher", expected, same, different,
         <<-EOF, :quiet=>true
         [
-          - 1+ 0
+        - 1+ 0
         ]
         Where, - 1 missing, + 1 additional
         EOF
@@ -301,11 +388,11 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
       it_behaves_like "a diff matcher", expected, same, different,
         <<-EOF
         [
-          - 1+ 0,
+        - 1+ 0,
           2,
-          ~ (3),
-          : 4,
-          { 5
+        ~ (3),
+        : 4,
+        { 5
         ]
         Where, - 1 missing, + 1 additional, ~ 1 match_regexp, : 1 match_class, { 1 match_proc
         EOF
@@ -315,11 +402,11 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
       it_behaves_like "a diff matcher", expected, same, different,
         <<-EOF , :color_scheme=>:default
         \e[0m[
-        \e[0m  \e[31m- \e[1m1\e[0m\e[33m+ \e[1m0\e[0m,
-        \e[0m  2,
-        \e[0m  \e[32m~ \e[0m\e[32m(\e[1m3\e[0m\e[32m)\e[0m\e[0m,
-        \e[0m  \e[34m: \e[1m4\e[0m,
-        \e[0m  \e[36m{ \e[1m5\e[0m
+        \e[0m\e[31m- \e[1m1\e[0m\e[33m+ \e[1m0\e[0m,
+        \e[0m\e[0m  \e[1m2\e[0m,
+        \e[0m\e[32m~ \e[0m\e[32m(\e[1m3\e[0m\e[32m)\e[0m\e[0m,
+        \e[0m\e[34m: \e[1m4\e[0m,
+        \e[0m\e[36m{ \e[1m5\e[0m
         \e[0m]
         Where, \e[31m- \e[1m1 missing\e[0m, \e[33m+ \e[1m1 additional\e[0m, \e[32m~ \e[1m1 match_regexp\e[0m, \e[34m: \e[1m1 match_class\e[0m, \e[36m{ \e[1m1 match_proc\e[0m
         EOF
@@ -328,11 +415,11 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
         it_behaves_like "a diff matcher", expected, same, different,
           <<-EOF , :color_scheme=>:white_background
           \e[0m[
-          \e[0m  \e[31m- \e[1m1\e[0m\e[35m+ \e[1m0\e[0m,
-          \e[0m  2,
-          \e[0m  \e[32m~ \e[0m\e[32m(\e[1m3\e[0m\e[32m)\e[0m\e[0m,
-          \e[0m  \e[34m: \e[1m4\e[0m,
-          \e[0m  \e[36m{ \e[1m5\e[0m
+          \e[0m\e[31m- \e[1m1\e[0m\e[35m+ \e[1m0\e[0m,
+          \e[0m\e[0m  \e[1m2\e[0m,
+          \e[0m\e[32m~ \e[0m\e[32m(\e[1m3\e[0m\e[32m)\e[0m\e[0m,
+          \e[0m\e[34m: \e[1m4\e[0m,
+          \e[0m\e[36m{ \e[1m5\e[0m
           \e[0m]
           Where, \e[31m- \e[1m1 missing\e[0m, \e[35m+ \e[1m1 additional\e[0m, \e[32m~ \e[1m1 match_regexp\e[0m, \e[34m: \e[1m1 match_class\e[0m, \e[36m{ \e[1m1 match_proc\e[0m
           EOF
