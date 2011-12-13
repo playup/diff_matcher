@@ -264,6 +264,16 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
 
       it_behaves_like "a diff matcher", expected, same, different,
         /- #<Proc.*?>\+ \"true\"\nWhere, - 1 missing, \+ 1 additional/
+
+      context "that defines another diff matcher" do
+        expected, same, different =
+          lambda { |array| array.all? { |item| DiffMatcher::Difference.new(String, item).matching? } },
+          ["A", "B", "C"],
+          ["A", "B", 0  ]
+
+        it_behaves_like "a diff matcher", expected, same, different,
+          /- #<Proc.*?>\+ \[\"A\", \"B\", 0\]\nWhere, - 1 missing, \+ 1 additional/
+      end
     end
   end
 
