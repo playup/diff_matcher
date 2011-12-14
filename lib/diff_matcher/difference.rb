@@ -20,7 +20,7 @@ module DiffMatcher
       :default=>{
         :missing       => [RED   , "-"],
         :additional    => [YELLOW, "+"],
-        :match_value   => [nil   , nil],
+        :match_value   => [RESET , " "],
         :match_regexp  => [GREEN , "~"],
         :match_class   => [BLUE  , ":"],
         :match_proc    => [CYAN  , "{"]
@@ -28,7 +28,7 @@ module DiffMatcher
       :white_background=> {
         :missing       => [RED    , "-"],
         :additional    => [MAGENTA, "+"],
-        :match_value   => [nil    , nil],
+        :match_value   => [RESET  , " "],
         :match_regexp  => [GREEN  , "~"],
         :match_class   => [BLUE   , ":"],
         :match_proc    => [CYAN   , "{"]
@@ -75,14 +75,6 @@ module DiffMatcher
       @item_types ||= @ignore_additional ? [:missing] : [:missing, :additional]
     end
 
-    def item_types_shown
-      @item_types_shown ||= lambda {
-        ret = [:different] + item_types
-        ret += [:additional] unless @quiet
-        ret.uniq
-      }.call
-    end
-
     def matches_shown
       @matches_shown ||= lambda {
         ret = []
@@ -94,29 +86,30 @@ module DiffMatcher
       }.call
     end
 
-    def difference(expected, actual, reverse=false)
+    def difference(expected, actual)
       if actual.is_a? expected.class
-        left = diff(expected, actual, true)
+        left = diff(expected, actual)
         right = diff(actual, expected)
         items_to_s(
           expected,
-          (item_types_shown).inject([]) { |a, method|
+          [:different, :missing, :additional].inject([]) { |a, method|
             a + send(method, left, right, expected.class).compact.map { |item| markup(method, item, expected.class) }
           }
         )
       else
-        difference_to_s(expected, actual, reverse)
+        difference_to_s(expected, actual)
       end
     end
 
-    def diff(expected, actual, reverse=false)
+    def diff(expected, actual)
       if expected.is_a?(Hash)
         expected.keys.inject({}) { |h, k|
-          h.update(k => actual.has_key?(k) ? difference(actual[k], expected[k], reverse) : expected[k])
+          h.update(k => actual.has_key?(k) ? difference(actual[k], expected[k]) : expected[k])
         }
       elsif expected.is_a?(Array)
-        expected, actual = [expected, actual].map { |x| x.each_with_index.inject({}) { |h, (v, i)| h.update(i=>v) } }
-        #diff(expected, actual, reverse)  # XXX - is there a test case for this?
+        expected, actual = [expected, actual].permutation.map { |a, b|
+          Diff::LCS.sdiff(b, a).map(&:new_element).each_with_index.inject({}) { |h,(x,i)| h.update(i=>(x||:___null)) }
+        }
         diff(expected, actual)
       elsif expected.is_a?(String)
         expected, actual = [expected, actual].map { |x| x.codepoints.to_a.each_with_index.inject({}) { |h, (v, i)| h.update(i=>v) } }
@@ -138,13 +131,17 @@ module DiffMatcher
 
     def different(left, right, expected_class)
       compare(right, expected_class, difference_to_s(right, left)) { |k|
-        "#{"#{k.inspect}=>" if expected_class == Hash}#{right[k]}" if right[k] and left.has_key?(k)
+        if right[k] and left.has_key?(k)
+          pad = %w([ {).include?(right[k][0]) ? "" : "  " # pad unless value is a Hash or Array difference
+          result = "#{"#{pad}#{k.inspect}=>" if expected_class == Hash}#{right[k]}"
+          result.scan("\n").size > 0 ? indent(result) : result
+        end
       }
     end
 
     def missing(left, right, expected_class)
       compare(left, expected_class) { |k|
-        "#{"#{k.inspect}=>" if expected_class == Hash}#{left[k].inspect}" unless right.has_key?(k)
+        "#{"#{k.inspect}=>" if expected_class == Hash}  #{left[k]}" unless right.has_key?(k)
       }
     end
 
@@ -161,12 +158,16 @@ module DiffMatcher
       end
     end
 
+    def indent(str, n=2)
+      (" "*n)+str.split("\n").join("\n#{" "*n}")
+    end
+
     def items_to_s(expected, items)
       case expected
         when Hash ; "{\n#{items.join(",\n")}\n}\n"
         when Array; "[\n#{items.join(",\n")}\n]\n"
         when String; items.map(&:to_s).map { |c| c.sub(/^[ ][ ]/, '') }.join
-        else items.join.strip
+        else items.join
       end if items.size > 0
     end
 
@@ -182,12 +183,19 @@ module DiffMatcher
       markup(match_type, actual, expected.class) if matches_shown.include?(match_type)
     end
 
-    def difference_to_s(expected, actual, reverse=false)
-      match, match_type = match?(*(reverse ? [actual, expected] : [expected, actual]))
+    def difference_to_s(expected, actual)
+      match, match_type = match?(expected, actual)
       if match
         match_to_s(expected, actual, match_type)
       else
         "#{markup(:missing, expected.inspect, expected.class)}#{markup(:additional, actual.inspect, expected.class)}"
+        if   actual    == :___null
+          "#{markup(:missing, expected.inspect, expected.class)}"
+        elsif expected == :___null
+          "#{markup(:additional, actual.inspect, expected.class)}" unless @quiet
+        else
+          "#{markup(:missing, expected.inspect, expected.class)}#{markup(:additional, actual.inspect, expected.class)}"
+        end
       end
     end
 
@@ -196,11 +204,11 @@ module DiffMatcher
         if expected_class == String
           item.match(/^[0-9]+$/) ? item.to_i.chr : item.gsub(/((?:[^\[m])[0-9]+(?:[^m\e]))+/) { |x| x.to_i.chr }  # XXX - yuk
         else
-          item.split("\n").map {|line| "  #{line}"}.join("\n")
-        end if item
+          item
+        end
       else
         color, prefix = @color_scheme[item_type]
-        "#{color}#{prefix+' ' if prefix}#{BOLD if color and item_type != :match_regexp}#{RESET if item_type == :match_regexp}#{item}#{RESET if color}" if item
+        "#{color}#{prefix} #{BOLD if color and item_type != :match_regexp}#{RESET if item_type == :match_regexp}#{item}#{RESET if color}" if item
       end if item
     end
   end
