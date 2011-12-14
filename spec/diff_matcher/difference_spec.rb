@@ -49,7 +49,7 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
         2
 
       it_behaves_like "a diff matcher", expected, same, different,
-        <<-EOF, {}
+        <<-EOF
         - 1+ 2
         Where, - 1 missing, + 1 additional
         EOF
@@ -72,8 +72,8 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
         different = 0
 
         it_behaves_like "a diff matcher", expected, same, different,
-          <<-EOF, {}
-          - "Happy Birthday to you"+ 0
+          <<-EOF
+          - \"Happy Birthday to you\\nHappy Birthday to you\\nHappy Birthday dear rspec\\nHappy Birthday to you\"+ 0
           Where, - 1 missing, + 1 additional
           EOF
       end
@@ -82,8 +82,8 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
         different = nil
 
         it_behaves_like "a diff matcher", expected, same, different,
-          <<-EOF, {}
-          - "Happy Birthday to you"+ nil
+          <<-EOF
+          - \"Happy Birthday to you\\nHappy Birthday to you\\nHappy Birthday dear rspec\\nHappy Birthday to you\"+ nil
           Where, - 1 missing, + 1 additional
           EOF
       end
@@ -96,7 +96,7 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
         false
 
       it_behaves_like "a diff matcher", expected, same, different,
-        <<-EOF, {}
+        <<-EOF
         - nil+ false
         Where, - 1 missing, + 1 additional
         EOF
@@ -109,7 +109,7 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
         [ 2 ]
 
       it_behaves_like "a diff matcher", expected, same, different,
-        <<-EOF, {}
+        <<-EOF
         [
         - 1+ 2
         ]
