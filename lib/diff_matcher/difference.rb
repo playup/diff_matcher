@@ -101,7 +101,7 @@ module DiffMatcher
       end
     end
 
-    def diff(expected, actual)
+    def diff(expected, actual, expected_class=nil)
       if expected.is_a?(Hash)
         expected.keys.inject({}) { |h, k|
           h.update(k => actual.has_key?(k) ? difference(actual[k], expected[k]) : expected[k])
@@ -110,17 +110,22 @@ module DiffMatcher
         expected, actual = [expected, actual].permutation.map { |a, b|
           Diff::LCS.sdiff(b, a).map(&:new_element).each_with_index.inject({}) { |h,(x,i)| h.update(i=>(x||:___null)) }
         }
-        diff(expected, actual)
-      elsif expected.is_a?(String)
-        expected, actual = [expected, actual].map { |x| x.codepoints.to_a.each_with_index.inject({}) { |h, (v, i)| h.update(i=>v) } }
-        diff(expected, actual)
+        diff(expected, actual, expected_class)
+      elsif expected.is_a?(String) && expected.size > 1
+        expected = expected.split("\n").map { |line|
+          line.codepoints.to_a.each_with_index.inject({}) { |h, (v, i)| h.update(i=>v.chr) }
+        }
+        actual = actual.split("\n").map { |line|
+          line.codepoints.to_a.each_with_index.inject({}) { |h, (v, i)| h.update(i=>v.chr) }
+        }
+        diff(expected, actual, String)
       else
         actual
       end if expected.is_a? actual.class
     end
 
     def compare(right, expected_class, default=nil)
-      if [Hash, Array, String].include? expected_class
+      if [Hash, Array].include?(expected_class) or (expected_class == String and right.is_a?(Hash))
         right && right.keys.tap { |keys| keys.sort if expected_class == Array }.map { |k|
           yield k
         }
@@ -166,7 +171,10 @@ module DiffMatcher
       case expected
         when Hash ; "{\n#{items.join(",\n")}\n}\n"
         when Array; "[\n#{items.join(",\n")}\n]\n"
-        when String; items.map(&:to_s).map { |c| c.sub(/^[ ][ ]/, '') }.join
+        #when String; items.map(&:to_s).map { |c| c.gsub(/((?:[^\[m])[0-9]+(?:[^m\e]))+/) { |x| x.to_i.chr } }.join
+        when String; items.join("\n")
+        ##  item.match(/^[0-9]+$/) ? item.to_i.chr : item.gsub(/((?:[^\[m])[0-9]+(?:[^m\e]))+/) { |x| x.to_i.chr }  # XXX - yuk
+        #when String; items.map(&:to_s).map { |c| c.sub(/^[ ][ ]/, '') }.join
         else items.join
       end if items.size > 0
     end
@@ -202,7 +210,9 @@ module DiffMatcher
     def markup(item_type, item, expected_class)
       if item_type == :different
         if expected_class == String
+          #puts item
           item.match(/^[0-9]+$/) ? item.to_i.chr : item.gsub(/((?:[^\[m])[0-9]+(?:[^m\e]))+/) { |x| x.to_i.chr }  # XXX - yuk
+          item
         else
           item
         end
