@@ -20,11 +20,11 @@ actual == expected     # when expected is anything else
 Example:
 
 ``` ruby
-    puts DiffMatcher::difference(
-      { :a=>{ :a1=>11          }, :b=>[ 21, 22 ], :c=>/\d/, :d=>Fixnum, :e=>lambda { |x| (4..6).include? x } },
-      { :a=>{ :a1=>10, :a2=>12 }, :b=>[ 21     ], :c=>'3' , :d=>4     , :e=>5                                },
-      :color_scheme=>:white_background
-    )
+puts DiffMatcher::difference(
+  { :a=>{ :a1=>11          }, :b=>[ 21, 22 ], :c=>/\d/, :d=>Fixnum, :e=>lambda { |x| (4..6).include? x } },
+  { :a=>{ :a1=>10, :a2=>12 }, :b=>[ 21     ], :c=>'3' , :d=>4     , :e=>5                                },
+  :color_scheme=>:white_background
+)
 ```
 
 ![example output](https://raw.github.com/playup/diff_matcher/master/doc/diff_matcher.gif)
@@ -104,6 +104,49 @@ puts DiffMatcher::difference([1], [1, 2])
 # => Where, + 1 additional
 ```
 
+
+When `expected` can take multiple forms use a `Matcher`
+
+``` ruby
+puts DiffMatcher::difference(DiffMatcher::Matcher[Fixnum,Float], "3")
+- Float+ "3"
+Where, - 1 missing, + 1 additional
+```
+
+
+When `actual` is an array of unknown size use an `AllMatcher` to match
+against *all* the elements in the array.
+
+``` ruby
+puts DiffMatcher::difference(DiffMatcher::AllMatcher[Fixnum], [1, 2, "3"])
+[
+  : 1,
+  : 2,
+  - Fixnum+ "3"
+]
+Where, - 1 missing, + 1 additional, : 2 match_class
+```
+
+
+When `actual` is an array of unknown size *and* `expected` can take
+multiple forms use a `Matcher` inside of an `AllMatcher` to match
+against *all* the elements in the array in any of the forms.
+
+``` ruby
+puts DiffMatcher::difference(
+  DiffMatcher::AllMatcher[
+    DiffMatcher::Matcher[Fixnum, Float]
+  ],
+  [1, 2.00, "3"]
+)
+[
+  | 1,
+  | 2.0,
+  - Float+ "3"
+]
+Where, - 1 missing, + 1 additional, | 2 match_matcher
+```
+
 ### Options
 
 `:ignore_additional=>true` will match even if `actual` has additional items
@@ -132,6 +175,7 @@ The items shown in a difference are prefixed as follows:
     match value   =>
     match regexp  => "~ "
     match class   => ": "
+    match matcher => "| "
     match proc    => "{ "
 
 
@@ -146,6 +190,7 @@ Using the `:default` colour scheme items shown in a difference are coloured as f
     match value   =>
     match regexp  => green
     match class   => blue
+    match matcher => blue
     match proc    => cyan
 
 Other colour schemes, eg. `:color_scheme=>:white_background` will use different colour mappings.

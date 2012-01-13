@@ -1,0 +1,14 @@
+Fri Aug 12 2011
+ - match against class Pattern < Hash which has an :optional_keys attr (or :required_keys?)
+ - array patterns with min/max ?  (keys 0..n required?)
+
+
+Also, the words `diff` and `match` seem to get thrown around and
+interchanged a lot.
+I think I should make it clear that `diff_matcher` was built as a differ
+that outputs a textual diff based on what it matched.
+ie. by matching `actual` against an `expected` value/pattern/class/proc.
+
+Wed Dec 14 2011
+- underline
+- string diff
