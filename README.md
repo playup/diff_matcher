@@ -20,11 +20,11 @@ actual == expected     # when expected is anything else
 Example:
 
 ``` ruby
-    puts DiffMatcher::difference(
-      { :a=>{ :a1=>11          }, :b=>[ 21, 22 ], :c=>/\d/, :d=>Fixnum, :e=>lambda { |x| (4..6).include? x } },
-      { :a=>{ :a1=>10, :a2=>12 }, :b=>[ 21     ], :c=>'3' , :d=>4     , :e=>5                                },
-      :color_scheme=>:white_background
-    )
+puts DiffMatcher::difference(
+  { :a=>{ :a1=>11          }, :b=>[ 21, 22 ], :c=>/\d/, :d=>Fixnum, :e=>lambda { |x| (4..6).include? x } },
+  { :a=>{ :a1=>10, :a2=>12 }, :b=>[ 21     ], :c=>'3' , :d=>4     , :e=>5                                },
+  :color_scheme=>:white_background
+)
 ```
 
 ![example output](https://raw.github.com/playup/diff_matcher/master/doc/diff_matcher.gif)
@@ -87,6 +87,7 @@ When `actual` is missing one of the `expected` values
 ``` ruby
 puts DiffMatcher::difference([1, 2], [1])
 # => [
+# =>   1
 # => - 2
 # => ]
 # => Where, - 1 missing
@@ -97,9 +98,53 @@ When `actual` has additional values to the `expected`
 ``` ruby
 puts DiffMatcher::difference([1], [1, 2])
 # => [
+# =>   1
 # => + 2
 # => ]
 # => Where, + 1 additional
+```
+
+
+When `expected` can take multiple forms use a `Matcher`
+
+``` ruby
+puts DiffMatcher::difference(DiffMatcher::Matcher[Fixnum,Float], "3")
+- Float+ "3"
+Where, - 1 missing, + 1 additional
+```
+
+
+When `actual` is an array of unknown size use an `AllMatcher` to match
+against *all* the elements in the array.
+
+``` ruby
+puts DiffMatcher::difference(DiffMatcher::AllMatcher[Fixnum], [1, 2, "3"])
+[
+  : 1,
+  : 2,
+  - Fixnum+ "3"
+]
+Where, - 1 missing, + 1 additional, : 2 match_class
+```
+
+
+When `actual` is an array of unknown size *and* `expected` can take
+multiple forms use a `Matcher` inside of an `AllMatcher` to match
+against *all* the elements in the array in any of the forms.
+
+``` ruby
+puts DiffMatcher::difference(
+  DiffMatcher::AllMatcher[
+    DiffMatcher::Matcher[Fixnum, Float]
+  ],
+  [1, 2.00, "3"]
+)
+[
+  | 1,
+  | 2.0,
+  - Float+ "3"
+]
+Where, - 1 missing, + 1 additional, | 2 match_matcher
 ```
 
 ### Options
@@ -142,6 +187,7 @@ The items shown in a difference are prefixed as follows:
     match value   =>
     match regexp  => "~ "
     match class   => ": "
+    match matcher => "| "
     match proc    => "{ "
 
 
@@ -156,6 +202,7 @@ Using the `:default` colour scheme items shown in a difference are coloured as f
     match value   =>
     match regexp  => green
     match class   => blue
+    match matcher => blue
     match proc    => cyan
 
 Other colour schemes, eg. `:color_scheme=>:white_background` will use different colour mappings.
@@ -192,6 +239,74 @@ It has extra functionality in also being able to recursively merge hashes and ar
 
 DiffMatcher can match using not only regexes but classes and procs.
 And the difference string that it outputs can be formatted in several ways as needed.
+
+
+Use with rspec
+---
+To use with rspec create the following custom matcher:
+
+``` ruby
+require 'diff_matcher'
+
+module RSpec
+  module Matchers
+    class BeMatching
+      include BaseMatcher
+
+      def initialize(expected, opts)
+        @expected = expected
+        @opts = opts.update(:color_enabled=>RSpec::configuration.color_enabled?)
+      end
+
+      def matches?(actual)
+        @difference = DiffMatcher::Difference.new(expected, actual, @opts)
+        @difference.matching?
+      end
+
+      def failure_message_for_should
+        @difference.to_s
+      end
+    end
+
+    def be_matching(expected, opts={})
+      Matchers::BeMatching.new(expected, opts)
+    end
+  end
+end
+```
+
+And use it with:
+
+``` ruby
+describe "hash matcher" do
+  subject { { :a=>1, :b=>2, :c=>'3', :d=>4, :e=>"additional stuff" } }
+  let(:expected) { { :a=>1, :b=>Fixnum, :c=>/[0-9]/, :d=>lambda { |x| (3..5).include?(x) } } }
+
+  it { should be_matching(expected, :ignore_additional=>true) }
+  it { should be_matching(expected) }
+end
+```
+
+Will result in:
+
+```
+  Failures:
+
+    1) hash matcher
+       Failure/Error: it { should be_matching(expected) }
+         {
+           :a=>1,
+           :b=>: 2,
+           :c=>~ (3),
+           :d=>{ 4,
+         + :e=>"additional stuff"
+         }
+         Where, + 1 additional, ~ 1 match_regexp, : 1 match_class, { 1 match_proc
+      # ./hash_matcher_spec.rb:6:in `block (2 levels) in <top (required)>'
+
+Finished in 0.00601 seconds
+2 examples, 1 failure
+```
 
 
 Contributing

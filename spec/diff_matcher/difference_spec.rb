@@ -12,34 +12,115 @@ def fix_EOF_problem(s)
   s.gsub("\n#{" " * indentation}", "\n").strip
 end
 
-describe "DiffMatcher::difference(expected, actual, opts)" do
-  subject { DiffMatcher::difference(expected, actual, opts) }
 
-  shared_examples_for "a diff matcher" do |expected, same, different, difference, opts|
-    opts ||= {}
-    context "with #{opts.size > 0 ? opts_to_s(opts) : "no opts"}" do
-      describe "difference(#{expected.inspect}, #{same.inspect}#{opts_to_s(opts)})" do
-        let(:expected) { expected }
-        let(:actual  ) { same     }
-        let(:opts    ) { opts     }
+shared_examples_for "a matcher" do |expected, expected2, same, different, difference, opts|
+  opts ||= {}
+  context "with #{opts.size > 0 ? opts_to_s(opts) : "no opts"}" do
+    describe "diff(#{same.inspect}#{opts_to_s(opts)})" do
+      let(:expected ) { expected }
+      let(:expected2) { expected }
+      let(:actual   ) { same     }
+      let(:opts     ) { opts     }
 
-        it { should be_nil }
-      end
+      it { should be_nil }
+    end
 
-      describe "difference(#{expected.inspect}, #{different.inspect}#{opts_to_s(opts)})" do
-        let(:expected) { expected  }
-        let(:actual  ) { different }
-        let(:opts    ) { opts      }
+    describe "diff(#{different.inspect}#{opts_to_s(opts)})" do
+      let(:expected ) { expected  }
+      let(:expected2) { expected }
+      let(:actual   ) { different }
+      let(:opts     ) { opts      }
 
-        it { should_not be_nil } unless RUBY_1_9
-        it {
-          difference.is_a?(Regexp) ?
-            should =~ difference :
-            should == fix_EOF_problem(difference)
-        } if RUBY_1_9
-      end
+      it { should_not be_nil } unless RUBY_1_9
+      it { should == fix_EOF_problem(difference)+"\n" } if RUBY_1_9
     end
   end
+end
+
+
+describe DiffMatcher::Matcher do
+  expected, expected2, same, different, difference =
+    {:nombre => String   , :edad   => Integer },
+    {:name   => String   , :age    => Integer },
+    {:name   => "Peter"  , :age    => 21      },
+    {:name   => 21       , :age    => 21      },
+    <<-EOF
+    {
+      :name=>\e[31m- \e[1mString\e[0m\e[33m+ \e[1m21\e[0m,
+      :age=>\e[34m: \e[1m21\e[0m
+    }
+    EOF
+
+  describe "DiffMatcher::Matcher[expected, expected2]," do
+    subject { DiffMatcher::Matcher[expected, expected2].diff(actual) }
+
+    it_behaves_like "a matcher", expected, expected2, same, different, difference
+  end
+
+  describe "DiffMatcher::Matcher[expected] | DiffMatcher::Matcher[expected2])" do
+    subject { (DiffMatcher::Matcher[expected] | DiffMatcher::Matcher[expected2]).diff(actual) }
+
+    it_behaves_like "a matcher", expected, expected2, same, different, difference
+  end
+end
+
+
+describe "DiffMatcher::AllMatcher[expected]" do
+  let(:all_matcher) { DiffMatcher::AllMatcher[expected] }
+  let(:expected ) { 1 }
+
+  describe "#diff(actual)" do
+    subject { all_matcher.diff(actual) }
+
+    context "when all match" do
+      let(:actual) { [1, 1, 1] }
+
+      it { should eql nil }
+    end
+
+    context "when not all match" do
+      let(:actual) { [1, 2, 1] }
+
+      it { should eql "[\n  1,\n  \e[31m- \e[1m1\e[0m\e[33m+ \e[1m2\e[0m,\n  1\n]\n" }
+    end
+
+    context "when actual is not an array" do
+      let(:actual) { 'a' }
+
+      it { expect { subject }.to raise_error(DiffMatcher::NotAnArray) }
+    end
+  end
+end
+
+
+shared_examples_for "a diff matcher" do |expected, same, different, difference, opts|
+  opts ||= {}
+  context "with #{opts.size > 0 ? opts_to_s(opts) : "no opts"}" do
+    describe "difference(#{expected.inspect}, #{same.inspect}#{opts_to_s(opts)})" do
+      let(:expected) { expected }
+      let(:actual  ) { same     }
+      let(:opts    ) { opts     }
+
+      it { should be_nil }
+    end
+
+    describe "difference(#{expected.inspect}, #{different.inspect}#{opts_to_s(opts)})" do
+      let(:expected) { expected  }
+      let(:actual  ) { different }
+      let(:opts    ) { opts      }
+
+      it { should_not be_nil } unless RUBY_1_9
+      it {
+        difference.is_a?(Regexp) ?
+          should =~ difference :
+          should == fix_EOF_problem(difference)
+      } if RUBY_1_9
+    end
+  end
+end
+
+describe "DiffMatcher::difference(expected, actual, opts)" do
+  subject { DiffMatcher::difference(expected, actual, opts) }
 
   describe "when expected is an instance," do
     context "of Fixnum," do
@@ -228,9 +309,7 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
         Where, - 1 missing, + 1 additional
         EOF
     end
-  end
 
-  describe "when expected is," do
     context "a Regex," do
       expected, same, different =
         /[a-z]/,
@@ -253,9 +332,7 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
           EOF
       end
     end
-  end
 
-  describe "when expected is," do
     context "a proc," do
       expected, same, different =
         lambda { |x| [FalseClass, TrueClass].include? x.class },
@@ -264,6 +341,110 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
 
       it_behaves_like "a diff matcher", expected, same, different,
         /- #<Proc.*?>\+ \"true\"\nWhere, - 1 missing, \+ 1 additional/
+
+      context "that defines another diff matcher" do
+        expected, same, different =
+          lambda { |array| array.all? { |item| DiffMatcher::Difference.new(String, item).matching? } },
+          ["A", "B", "C"],
+          ["A", "B", 0  ]
+
+        it_behaves_like "a diff matcher", expected, same, different,
+          /- #<Proc.*?>\+ \[\"A\", \"B\", 0\]\nWhere, - 1 missing, \+ 1 additional/
+      end
+    end
+
+    context "a DiffMatcher::Matcher," do
+      expected, same, different =
+        DiffMatcher::Matcher[String],
+        "a",
+        1
+
+      it_behaves_like "a diff matcher", expected, same, different,
+        <<-EOF
+        - String+ 1
+        Where, - 1 missing, + 1 additional
+        EOF
+
+      context "or-ed with another DiffMatcher::Matcher," do
+        expected, same, different =
+          DiffMatcher::Matcher[Fixnum] | DiffMatcher::Matcher[String],
+          "a",
+          1.0
+
+        it_behaves_like "a diff matcher", expected, same, different,
+          <<-EOF
+          - String+ 1.0
+          Where, - 1 missing, + 1 additional
+          EOF
+      end
+    end
+
+    context "a DiffMatcher::AllMatcher," do
+      expected, same, different =
+        DiffMatcher::AllMatcher[String],
+        %w(ay be ci),
+        ["a", 2, "c"]
+
+      it_behaves_like "a diff matcher", expected, same, different,
+        <<-EOF
+        [
+          : "a",
+          - String+ 2,
+          : "c"
+        ]
+        Where, - 1 missing, + 1 additional, : 2 match_class
+        EOF
+
+      end
+    end
+
+    context "a DiffMatcher::AllMatcher using an or-ed DiffMatcher::Matcher," do
+      expected, same, different =
+        DiffMatcher::AllMatcher[ DiffMatcher::Matcher[Fixnum, Float] ],
+        [1, 2.0, 3],
+        [1, "2", 3]
+
+      it_behaves_like "a diff matcher", expected, same, different,
+        <<-EOF
+        [
+          | 1,
+          - Float+ "2",
+          | 3
+        ]
+        Where, - 1 missing, + 1 additional, | 2 match_matcher
+        EOF
+
+      context "more complex," do
+        expected, same, different =
+          DiffMatcher::AllMatcher[
+            DiffMatcher::Matcher[
+              {:nombre=>String, :edad=>Fixnum},
+              {:name=>String, :age=>Fixnum}
+            ]
+          ],
+          [
+            {:name=>"Alice", :age=>10},
+            {:name=>"Bob"  , :age=>20},
+            {:name=>"Con"  , :age=>30}
+          ],
+          [
+            {:name=>"Alice", :age=>10 },
+            {:name=>"Bob"  , :age=>nil},
+            {:nombre=>"Con", :edad=>30}
+          ]
+
+        it_behaves_like "a diff matcher", expected, same, different,
+          <<-EOF
+          [
+            | {:name=>"Alice", :age=>10},
+            {
+              :name=>: "Bob",
+              :age=>- Fixnum+ nil
+            },
+            | {:nombre=>"Con", :edad=>30}
+          ]
+          Where, - 1 missing, + 1 additional, : 1 match_class, | 2 match_matcher
+          EOF
     end
   end
 
@@ -279,7 +460,7 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
         [
           - 1+ 0,
           2,
-          ~ (3),
+          ~ "(3)",
           : 4,
           { 5
         ]
@@ -303,7 +484,7 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
         [
           - 1+ 0,
           2,
-          ~ (3),
+          ~ "(3)",
           : 4,
           { 5
         ]
@@ -332,7 +513,7 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
         \e[0m[
         \e[0m  \e[31m- \e[1m1\e[0m\e[33m+ \e[1m0\e[0m,
         \e[0m  2,
-        \e[0m  \e[32m~ \e[0m\e[32m(\e[1m3\e[0m\e[32m)\e[0m\e[0m,
+        \e[0m  \e[32m~ \e[0m"\e[32m(\e[1m3\e[0m\e[32m)\e[0m"\e[0m,
         \e[0m  \e[34m: \e[1m4\e[0m,
         \e[0m  \e[36m{ \e[1m5\e[0m
         \e[0m]
@@ -345,7 +526,7 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
           \e[0m[
           \e[0m  \e[31m- \e[1m1\e[0m\e[35m+ \e[1m0\e[0m,
           \e[0m  2,
-          \e[0m  \e[32m~ \e[0m\e[32m(\e[1m3\e[0m\e[32m)\e[0m\e[0m,
+          \e[0m  \e[32m~ \e[0m"\e[32m(\e[1m3\e[0m\e[32m)\e[0m"\e[0m,
           \e[0m  \e[34m: \e[1m4\e[0m,
           \e[0m  \e[36m{ \e[1m5\e[0m
           \e[0m]

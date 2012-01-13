@@ -5,6 +5,50 @@ module DiffMatcher
     difference.matching? ? nil : difference.to_s
   end
 
+  class Matcher
+    attr_reader :expecteds
+
+    def self.[](*expected)
+      new(*expected)
+    end
+
+    def initialize(*expected)
+      @expecteds = [expected].flatten
+      @opts = {}
+    end
+
+    def |(other)
+      #"(#{expecteds.join(",")}|#{other.expecteds.join(",")})"
+      tap { @expecteds += other.expecteds }
+    end
+
+    def expected(expected, actual)
+      expected
+    end
+
+    def diff(actual, opts={})
+      dif = nil
+      @expecteds.any? { |e|
+        d = DiffMatcher::Difference.new(expected(e, actual), actual, opts)
+        dif = d.matching? ? nil : d.dif
+        d.matching?
+      }
+      dif
+    end
+  end
+
+  class NotAnArray < Exception; end
+  class AllMatcher < Matcher
+    def expected(expected, actual)
+      [expected]*actual.size
+    end
+
+    def diff(actual, opts={})
+      raise NotAnArray unless actual.is_a?(Array)
+      super
+    end
+  end
+
   class Difference
     RESET   = "\e[0m"
     BOLD    = "\e[1m"
@@ -16,28 +60,25 @@ module DiffMatcher
     MAGENTA = "\e[35m"
     CYAN    = "\e[36m"
 
-    COLOR_SCHEMES = {
-      :default=>{
+    DEFAULT_COLOR_SCHEME = {
         :missing       => [RED   , "-"],
         :additional    => [YELLOW, "+"],
         :match_value   => [nil   , nil],
         :match_regexp  => [GREEN , "~"],
         :match_class   => [BLUE  , ":"],
+        :match_matcher => [BLUE  , "|"],
         :match_proc    => [CYAN  , "{"]
-      },
-      :white_background=> {
-        :missing       => [RED    , "-"],
-        :additional    => [MAGENTA, "+"],
-        :match_value   => [nil    , nil],
-        :match_regexp  => [GREEN  , "~"],
-        :match_class   => [BLUE   , ":"],
-        :match_proc    => [CYAN   , "{"]
-      }
     }
 
-    attr_reader :dif
+    COLOR_SCHEMES = {
+      :default          => DEFAULT_COLOR_SCHEME,
+      :white_background => DEFAULT_COLOR_SCHEME.merge(
+        :additional    => [MAGENTA, "+"]
+      ) 
+    }
 
     def initialize(expected, actual, opts={})
+      @opts = opts
       @ignore_additional = opts[:ignore_additional]
       @quiet             = opts[:quiet]
       @underline         = opts[:underline]
@@ -73,6 +114,10 @@ module DiffMatcher
       end
     end
 
+    def dif
+      @difference
+    end
+
     private
 
     def item_types
@@ -91,16 +136,16 @@ module DiffMatcher
       @matches_shown ||= lambda {
         ret = []
         unless @quiet
-          ret += [:match_class, :match_proc, :match_regexp]
+          ret += [:match_matcher, :match_class, :match_proc, :match_regexp]
           ret += [:match_value]
         end
         ret
       }.call
     end
 
-    def difference(expected, actual, reverse=false)
+    def difference(expected, actual)
       if actual.is_a? expected.class
-        left = diff(expected, actual, true)
+        left = diff(expected, actual)
         right = diff(actual, expected)
         items_to_s(
           expected,
@@ -109,18 +154,17 @@ module DiffMatcher
           }
         )
       else
-        difference_to_s(expected, actual, reverse)
+        difference_to_s(expected, actual)
       end
     end
 
-    def diff(expected, actual, reverse=false)
+    def diff(expected, actual)
       if expected.is_a?(Hash)
         expected.keys.inject({}) { |h, k|
-          h.update(k => actual.has_key?(k) ? difference(actual[k], expected[k], reverse) : expected[k])
+          h.update(k => actual.has_key?(k) ? difference(actual[k], expected[k]) : expected[k])
         }
       elsif expected.is_a?(Array)
         expected, actual = [expected, actual].map { |x| x.each_with_index.inject({}) { |h, (v, i)| h.update(i=>v) } }
-        #diff(expected, actual, reverse)  # XXX - is there a test case for this?
         diff(expected, actual)
       else
         actual
@@ -141,13 +185,13 @@ module DiffMatcher
       compare(right, expected_class, difference_to_s(right, left)) { |k|
         "#{"#{k.inspect}=>" if expected_class == Hash}#{right[k]}" if right[k] and left.has_key?(k)
       }
-   end
+    end
 
     def missing(left, right, expected_class)
       compare(left, expected_class) { |k|
         "#{"#{k.inspect}=>" if expected_class == Hash}#{left[k].inspect}" unless right.has_key?(k)
       }
-   end
+    end
 
     def additional(left, right, expected_class)
       missing(right, left, expected_class)
@@ -155,10 +199,13 @@ module DiffMatcher
 
     def match?(expected, actual)
       case expected
-        when Class ; [actual.is_a?(expected)                         , :match_class  ]
-        when Proc  ; [expected.call(actual)                          , :match_proc   ]
-        when Regexp; [actual.is_a?(String) && actual.match(expected) , :match_regexp ]
-        else         [actual == expected                             , :match_value  ]
+        when Matcher
+          d = expected.diff(actual, @opts)
+                      [d.nil?                                      , :match_matcher, d]
+        when Class  ; [actual.is_a?(expected)                         , :match_class  ]
+        when Proc   ; [expected.call(actual)                          , :match_proc   ]
+        when Regexp ; [actual.is_a?(String) && actual.match(expected) , :match_regexp ]
+        else          [actual == expected                             , :match_value  ]
       end
     end
 
@@ -179,15 +226,16 @@ module DiffMatcher
 
     def match_to_s(expected, actual, match_type)
       actual = match_regexp_to_s(expected, actual) if match_type == :match_regexp
-      markup(match_type, actual) if matches_shown.include? match_type
+      markup(match_type, actual) if matches_shown.include?(match_type)
     end
 
-    def difference_to_s(expected, actual, reverse=false)
-      match, match_type = match? *(reverse ? [actual, expected] : [expected, actual])
+    def difference_to_s(expected, actual)
+      match, match_type, d = match?(expected, actual)
       if match
-        match_to_s(expected, actual, match_type)
+        match_to_s(expected, actual.inspect, match_type)
       else
-        "#{markup(:missing, expected.inspect)}#{markup(:additional, actual.inspect)}"
+        match_type == :match_matcher ? d :
+          "#{markup(:missing, expected.inspect)}#{markup(:additional, actual.inspect)}"
       end
     end
 
