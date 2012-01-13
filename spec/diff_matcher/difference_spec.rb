@@ -414,23 +414,23 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
         Where, - 1 missing, + 1 additional, | 2 match_matcher
         EOF
 
-      context "more complex", do
+      context "more complex," do
         expected, same, different =
           DiffMatcher::AllMatcher[
             DiffMatcher::Matcher[
-              {nombre:String, edad:Fixnum},
-              {name:String, age:Fixnum}
+              {:nombre=>String, :edad=>Fixnum},
+              {:name=>String, :age=>Fixnum}
             ]
           ],
           [
-            {name: "Alice", age: 10},
-            {name: "Bob"  , age: 20},
-            {name: "Con"  , age: 30}
+            {:name=>"Alice", :age=>10},
+            {:name=>"Bob"  , :age=>20},
+            {:name=>"Con"  , :age=>30}
           ],
           [
-            {name: "Alice", age: 10 },
-            {name: "Bob"  , age: nil},
-            {nombre: "Con"  , edad: 30 }
+            {:name=>"Alice", :age=>10 },
+            {:name=>"Bob"  , :age=>nil},
+            {:nombre=>"Con", :edad=>30}
           ]
 
         it_behaves_like "a diff matcher", expected, same, different,
