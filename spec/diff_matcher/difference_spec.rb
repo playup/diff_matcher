@@ -13,9 +13,9 @@ def fix_EOF_problem(s)
 end
 
 
-shared_examples_for "a matcher" do |expected, expected2, same, different, difference, opts|
+shared_examples_for "an or-ed matcher" do |expected, expected2, same, different, difference, opts|
   opts ||= {}
-  context "with #{opts.size > 0 ? opts_to_s(opts) : "no opts"}" do
+  context "where expected=#{expected.inspect}, expected2=#{expected2.inspect}" do
     describe "diff(#{same.inspect}#{opts_to_s(opts)})" do
       let(:expected ) { expected }
       let(:expected2) { expected }
@@ -54,13 +54,19 @@ describe DiffMatcher::Matcher do
   describe "DiffMatcher::Matcher[expected, expected2]," do
     subject { DiffMatcher::Matcher[expected, expected2].diff(actual) }
 
-    it_behaves_like "a matcher", expected, expected2, same, different, difference
-  end
+    it_behaves_like "an or-ed matcher", expected, expected2, same, different, difference
 
-  describe "DiffMatcher::Matcher[expected] | DiffMatcher::Matcher[expected2])" do
-    subject { (DiffMatcher::Matcher[expected] | DiffMatcher::Matcher[expected2]).diff(actual) }
+    context "when Matchers are or-ed it works the same" do
+      subject { (DiffMatcher::Matcher[expected] | DiffMatcher::Matcher[expected2]).diff(actual) }
 
-    it_behaves_like "a matcher", expected, expected2, same, different, difference
+      it_behaves_like "an or-ed matcher", expected, expected2, same, different, difference
+    end
+
+    context "expecteds are in different order it still uses the closest dif" do
+      subject { DiffMatcher::Matcher[expected2, expected].diff(actual) }
+
+      it_behaves_like "an or-ed matcher", expected2, expected, same, different, difference
+    end
   end
 end
 
@@ -118,6 +124,25 @@ shared_examples_for "a diff matcher" do |expected, same, different, difference, 
     end
   end
 end
+
+describe "DiffMatcher::Matcher[expected].diff(actual, opts)" do
+  subject { DiffMatcher::Matcher[expected].diff(actual, opts) }
+
+  describe "when expected is an instance," do
+    context "of Fixnum," do
+      expected, same, different =
+        1,
+        1,
+        2
+
+      it_behaves_like "a diff matcher", expected, same, different,
+        <<-EOF, {}
+        \e[31m- \e[1m1\e[0m\e[33m+ \e[1m2\e[0m
+        EOF
+    end
+  end
+end
+
 
 describe "DiffMatcher::difference(expected, actual, opts)" do
   subject { DiffMatcher::difference(expected, actual, opts) }

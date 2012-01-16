@@ -27,13 +27,18 @@ module DiffMatcher
     end
 
     def diff(actual, opts={})
-      dif = nil
-      @expecteds.any? { |e|
+      difs = []
+      matched = @expecteds.any? { |e|
         d = DiffMatcher::Difference.new(expected(e, actual), actual, opts)
-        dif = d.matching? ? nil : d.dif
+        unless d.matching?
+          difs << [ d.dif_count, d.dif ]
+        end
         d.matching?
       }
-      dif
+      unless matched
+        count, dif = difs.sort.last
+        dif
+      end
     end
   end
 
@@ -83,6 +88,7 @@ module DiffMatcher
       @quiet             = opts[:quiet]
       @color_enabled     = opts[:color_enabled] || !!opts[:color_scheme]
       @color_scheme      = COLOR_SCHEMES[opts[:color_scheme] || :default]
+      @dif_count = 0
       @difference = difference(expected, actual)
     end
 
@@ -101,6 +107,7 @@ module DiffMatcher
           unless item_type == :match_value
             color, prefix = @color_scheme[item_type]
             count = msg.scan("#{color}#{prefix}").size
+            @dif_count += count if [:missing, :additional].include? item_type
             "#{color}#{prefix} #{BOLD}#{count} #{item_type}#{RESET}" if count > 0
           end
         }.compact.join(", ")
@@ -108,6 +115,10 @@ module DiffMatcher
 
         @color_enabled ? msg : msg.gsub(/\e\[\d+m/, "")
       end
+    end
+
+    def dif_count
+      @dif_count
     end
 
     def dif
