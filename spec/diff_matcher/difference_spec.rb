@@ -9,7 +9,9 @@ def fix_EOF_problem(s)
   # <<-EOF isn't working like its meant to :(
   whitespace = s.split("\n")[-1][/^[ ]+/]
   indentation = whitespace ? whitespace.size : 0
-  s.gsub("\n#{" " * indentation}", "\n").strip
+  s.gsub("\n#{" " * indentation}", "\n").tap { |result|
+    result.strip! if whitespace
+  }
 end
 
 
@@ -32,7 +34,7 @@ shared_examples_for "an or-ed matcher" do |expected, expected2, same, different,
       let(:opts     ) { opts      }
 
       it { should_not be_nil } unless RUBY_1_9
-      it { should == fix_EOF_problem(difference)+"\n" } if RUBY_1_9
+      it { should == fix_EOF_problem(difference) } if RUBY_1_9
     end
   end
 end
@@ -44,12 +46,7 @@ describe DiffMatcher::Matcher do
     {:name   => String   , :age    => Integer },
     {:name   => "Peter"  , :age    => 21      },
     {:name   => 21       , :age    => 21      },
-    <<-EOF
-    {
-      :name=>\e[31m- \e[1mString\e[0m\e[33m+ \e[1m21\e[0m,
-      :age=>\e[34m: \e[1m21\e[0m
-    }
-    EOF
+    "{\n  :name=>\e[31m- \e[1mString\e[0m\e[33m+ \e[1m21\e[0m,\n  :age=>\e[34m: \e[1m21\e[0m\n}\n"
 
   describe "DiffMatcher::Matcher[expected, expected2]," do
     subject { DiffMatcher::Matcher[expected, expected2].diff(actual) }
@@ -136,9 +133,20 @@ describe "DiffMatcher::Matcher[expected].diff(actual, opts)" do
         2
 
       it_behaves_like "a diff matcher", expected, same, different,
-        <<-EOF, {}
-        \e[31m- \e[1m1\e[0m\e[33m+ \e[1m2\e[0m
-        EOF
+        "\e[31m- \e[1m1\e[0m\e[33m+ \e[1m2\e[0m", {}
+    end
+  end
+
+  describe "when expected is an instance," do
+    context "of Hash, with optional keys" do
+      expected, same, different =
+        {:a=>1, :b=>Fixnum},
+        {:a=>1},
+        {:a=>2}
+
+      it_behaves_like "a diff matcher", expected, same, different,
+        "{\n  :a=>\e[31m- \e[1m1\e[0m\e[33m+ \e[1m2\e[0m\n}\n",
+        {:optional_keys=>[:b]}
     end
   end
 end
@@ -420,6 +428,40 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
         Where, - 1 missing, + 1 additional, : 2 match_class
         EOF
 
+      end
+
+      context "with a min restriction" do
+        expected, same, different =
+          DiffMatcher::AllMatcher.new(String, :min=>3),
+          %w(ay be ci),
+          %w(ay be)
+
+        it_behaves_like "a diff matcher", expected, same, different,
+          <<-EOF
+          [
+            : "ay",
+            : "be",
+          - String
+          ]
+          Where, - 1 missing, : 2 match_class
+          EOF
+      end
+
+      context "with a max restriction" do
+        expected, same, different =
+          DiffMatcher::AllMatcher.new(String, :max=>2),
+          %w(ay be),
+          %w(ay be ci)
+
+        it_behaves_like "a diff matcher", expected, same, different,
+          <<-EOF
+          [
+            : "ay",
+            : "be",
+          + "ci"
+          ]
+          Where, + 1 additional, : 2 match_class
+          EOF
       end
     end
 

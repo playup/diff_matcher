@@ -8,13 +8,13 @@ module DiffMatcher
   class Matcher
     attr_reader :expecteds
 
-    def self.[](*expected)
-      new(*expected)
+    def self.[](*expecteds)
+      expecteds.inject(nil) { |obj, e| obj ? obj | new(e) : new(e) }
     end
 
-    def initialize(*expected)
-      @expecteds = [expected].flatten
-      @opts = {}
+    def initialize(expected, opts={})
+      @expecteds = [expected]
+      @expected_opts = {expected => opts}
     end
 
     def |(other)
@@ -22,14 +22,18 @@ module DiffMatcher
       tap { @expecteds += other.expecteds }
     end
 
-    def expected(expected, actual)
-      expected
+    def expected(e, actual)
+      e
+    end
+
+    def expected_opts(e)
+      @expected_opts.fetch(e, {})
     end
 
     def diff(actual, opts={})
       difs = []
       matched = @expecteds.any? { |e|
-        d = DiffMatcher::Difference.new(expected(e, actual), actual, opts)
+        d = DiffMatcher::Difference.new(expected(e, actual), actual, opts.merge(expected_opts(e)))
         unless d.matching?
           difs << [ d.dif_count, d.dif ]
         end
@@ -44,8 +48,13 @@ module DiffMatcher
 
   class NotAnArray < Exception; end
   class AllMatcher < Matcher
-    def expected(expected, actual)
-      [expected]*actual.size
+    def expected(e, actual)
+      opts = expected_opts(e)
+      size = actual.size
+      min = opts[:min] || 0
+      max = opts[:max] || 1_000_000 # MAXINT?
+      size = size > min ? (size < max ? size : max) : min
+      [e]*size
     end
 
     def diff(actual, opts={})
@@ -88,6 +97,7 @@ module DiffMatcher
       @quiet             = opts[:quiet]
       @color_enabled     = opts[:color_enabled] || !!opts[:color_scheme]
       @color_scheme      = COLOR_SCHEMES[opts[:color_scheme] || :default]
+      @optional_keys = opts.delete(:optional_keys) || []
       @dif_count = 0
       @difference = difference(expected, actual)
     end
@@ -196,7 +206,7 @@ module DiffMatcher
 
     def missing(left, right, expected_class)
       compare(left, expected_class) { |k|
-        "#{"#{k.inspect}=>" if expected_class == Hash}#{left[k].inspect}" unless right.has_key?(k)
+        "#{"#{k.inspect}=>" if expected_class == Hash}#{left[k].inspect}" unless right.has_key?(k) || @optional_keys.include?(k)
       }
     end
 
