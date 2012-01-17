@@ -280,6 +280,19 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
       end
     end
 
+    context "of Range," do
+      expected, same, different =
+        (1..3),
+        2,
+        4
+
+      it_behaves_like "a diff matcher", expected, same, different,
+        <<-EOF
+        - 1..3+ 4
+        Where, - 1 missing, + 1 additional
+        EOF
+    end
+
     context "of Hash," do
       expected, same, different =
         { "a"=>1 },
@@ -517,11 +530,11 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
 
   context "when expected has multiple items," do
     expected, same, different =
-      [ 1,  2, /\d/, Fixnum, lambda { |x| (4..6).include? x } ],
-      [ 1,  2, "3" , 4     , 5                                ],
-      [ 0,  2, "3" , 4     , 5                                ]
+      [ 1,  2, /\d/, Fixnum, 4..6 , lambda { |x| x % 6 == 0 } ],
+      [ 1,  2, "3" , 4     , 5    , 6                         ],
+      [ 0,  2, "3" , 4     , 5    , 6                         ]
 
-    describe "it shows regex, class, proc matches and matches" do
+    describe "it shows regex, class, range, proc matches and matches" do
       it_behaves_like "a diff matcher", expected, same, different,
         <<-EOF
         [
@@ -529,9 +542,10 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
           2,
           ~ "(3)",
           : 4,
-          { 5
+          . 5,
+          { 6
         ]
-        Where, - 1 missing, + 1 additional, ~ 1 match_regexp, : 1 match_class, { 1 match_proc
+        Where, - 1 missing, + 1 additional, ~ 1 match_regexp, : 1 match_class, . 1 match_range, { 1 match_proc
         EOF
     end
 
@@ -553,9 +567,10 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
           2,
           ~ "(3)",
           : 4,
-          { 5
+          . 5,
+          { 6
         ]
-        Where, - 1 missing, + 1 additional, ~ 1 match_regexp, : 1 match_class, { 1 match_proc
+        Where, - 1 missing, + 1 additional, ~ 1 match_regexp, : 1 match_class, . 1 match_range, { 1 match_proc
         EOF
     end
 
@@ -567,9 +582,10 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
         \e[0m  2,
         \e[0m  \e[32m~ \e[0m"\e[32m(\e[1m3\e[0m\e[32m)\e[0m"\e[0m,
         \e[0m  \e[34m: \e[1m4\e[0m,
-        \e[0m  \e[36m{ \e[1m5\e[0m
+        \e[0m  \e[36m. \e[1m5\e[0m,
+        \e[0m  \e[36m{ \e[1m6\e[0m
         \e[0m]
-        Where, \e[31m- \e[1m1 missing\e[0m, \e[33m+ \e[1m1 additional\e[0m, \e[32m~ \e[1m1 match_regexp\e[0m, \e[34m: \e[1m1 match_class\e[0m, \e[36m{ \e[1m1 match_proc\e[0m
+        Where, \e[31m- \e[1m1 missing\e[0m, \e[33m+ \e[1m1 additional\e[0m, \e[32m~ \e[1m1 match_regexp\e[0m, \e[34m: \e[1m1 match_class\e[0m, \e[36m. \e[1m1 match_range\e[0m, \e[36m{ \e[1m1 match_proc\e[0m
         EOF
 
       context "on a white background" do
@@ -580,9 +596,10 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
           \e[0m  2,
           \e[0m  \e[32m~ \e[0m"\e[32m(\e[1m3\e[0m\e[32m)\e[0m"\e[0m,
           \e[0m  \e[34m: \e[1m4\e[0m,
-          \e[0m  \e[36m{ \e[1m5\e[0m
+          \e[0m  \e[36m. \e[1m5\e[0m,
+          \e[0m  \e[36m{ \e[1m6\e[0m
           \e[0m]
-          Where, \e[31m- \e[1m1 missing\e[0m, \e[35m+ \e[1m1 additional\e[0m, \e[32m~ \e[1m1 match_regexp\e[0m, \e[34m: \e[1m1 match_class\e[0m, \e[36m{ \e[1m1 match_proc\e[0m
+          Where, \e[31m- \e[1m1 missing\e[0m, \e[35m+ \e[1m1 additional\e[0m, \e[32m~ \e[1m1 match_regexp\e[0m, \e[34m: \e[1m1 match_class\e[0m, \e[36m. \e[1m1 match_range\e[0m, \e[36m{ \e[1m1 match_proc\e[0m
           EOF
       end
     end

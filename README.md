@@ -208,6 +208,7 @@ The items shown in a difference are prefixed as follows:
     match regexp  => "~ "
     match class   => ": "
     match matcher => "| "
+    match proc    => ". "
     match proc    => "{ "
 
 
@@ -223,6 +224,7 @@ Using the `:default` colour scheme items shown in a difference are coloured as f
     match regexp  => green
     match class   => blue
     match matcher => blue
+    match range   => cyan
     match proc    => cyan
 
 Other colour schemes, eg. `:color_scheme=>:white_background` will use different colour mappings.

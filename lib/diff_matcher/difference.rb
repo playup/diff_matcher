@@ -81,6 +81,7 @@ module DiffMatcher
         :match_regexp  => [GREEN , "~"],
         :match_class   => [BLUE  , ":"],
         :match_matcher => [BLUE  , "|"],
+        :match_range   => [CYAN  , "."],
         :match_proc    => [CYAN  , "{"]
     }
 
@@ -153,7 +154,7 @@ module DiffMatcher
       @matches_shown ||= lambda {
         ret = []
         unless @quiet
-          ret += [:match_matcher, :match_class, :match_proc, :match_regexp]
+          ret += [:match_matcher, :match_class, :match_range, :match_proc, :match_regexp]
           ret += [:match_value]
         end
         ret
@@ -220,6 +221,7 @@ module DiffMatcher
           d = expected.diff(actual, @opts)
                       [d.nil?                                      , :match_matcher, d]
         when Class  ; [actual.is_a?(expected)                         , :match_class  ]
+        when Range  ; [expected.include?(actual)                      , :match_range  ]
         when Proc   ; [expected.call(actual)                          , :match_proc   ]
         when Regexp ; [actual.is_a?(String) && actual.match(expected) , :match_regexp ]
         else          [actual == expected                             , :match_value  ]
