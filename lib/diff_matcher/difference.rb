@@ -8,13 +8,13 @@ module DiffMatcher
   class Matcher
     attr_reader :expecteds
 
-    def self.[](*expected)
-      new(*expected)
+    def self.[](*expecteds)
+      expecteds.inject(nil) { |obj, e| obj ? obj | new(e) : new(e) }
     end
 
-    def initialize(*expected)
-      @expecteds = [expected].flatten
-      @opts = {}
+    def initialize(expected, opts={})
+      @expecteds = [expected]
+      @expected_opts = {expected => opts}
     end
 
     def |(other)
@@ -22,25 +22,39 @@ module DiffMatcher
       tap { @expecteds += other.expecteds }
     end
 
-    def expected(expected, actual)
-      expected
+    def expected(e, actual)
+      e
+    end
+
+    def expected_opts(e)
+      @expected_opts.fetch(e, {})
     end
 
     def diff(actual, opts={})
-      dif = nil
-      @expecteds.any? { |e|
-        d = DiffMatcher::Difference.new(expected(e, actual), actual, opts)
-        dif = d.matching? ? nil : d.dif
+      difs = []
+      matched = @expecteds.any? { |e|
+        d = DiffMatcher::Difference.new(expected(e, actual), actual, opts.merge(expected_opts(e)))
+        unless d.matching?
+          difs << [ d.dif_count, d.dif ]
+        end
         d.matching?
       }
-      dif
+      unless matched
+        count, dif = difs.sort.last
+        dif
+      end
     end
   end
 
   class NotAnArray < Exception; end
   class AllMatcher < Matcher
-    def expected(expected, actual)
-      [expected]*actual.size
+    def expected(e, actual)
+      opts = expected_opts(e)
+      size = actual.size
+      min = opts[:min] || 0
+      max = opts[:max] || 1_000_000 # MAXINT?
+      size = size > min ? (size < max ? size : max) : min
+      [e]*size
     end
 
     def diff(actual, opts={})
@@ -67,6 +81,7 @@ module DiffMatcher
         :match_regexp  => [GREEN , "~"],
         :match_class   => [BLUE  , ":"],
         :match_matcher => [BLUE  , "|"],
+        :match_range   => [CYAN  , "."],
         :match_proc    => [CYAN  , "{"]
     }
 
@@ -83,6 +98,8 @@ module DiffMatcher
       @quiet             = opts[:quiet]
       @color_enabled     = opts[:color_enabled] || !!opts[:color_scheme]
       @color_scheme      = COLOR_SCHEMES[opts[:color_scheme] || :default]
+      @optional_keys = opts.delete(:optional_keys) || []
+      @dif_count = 0
       @difference = difference(expected, actual)
     end
 
@@ -101,6 +118,7 @@ module DiffMatcher
           unless item_type == :match_value
             color, prefix = @color_scheme[item_type]
             count = msg.scan("#{color}#{prefix}").size
+            @dif_count += count if [:missing, :additional].include? item_type
             "#{color}#{prefix} #{BOLD}#{count} #{item_type}#{RESET}" if count > 0
           end
         }.compact.join(", ")
@@ -108,6 +126,10 @@ module DiffMatcher
 
         @color_enabled ? msg : msg.gsub(/\e\[\d+m/, "")
       end
+    end
+
+    def dif_count
+      @dif_count
     end
 
     def dif
@@ -124,7 +146,7 @@ module DiffMatcher
       @matches_shown ||= lambda {
         ret = []
         unless @quiet
-          ret += [:match_matcher, :match_class, :match_proc, :match_regexp]
+          ret += [:match_matcher, :match_class, :match_range, :match_proc, :match_regexp]
           ret += [:match_value]
         end
         ret
@@ -183,7 +205,7 @@ module DiffMatcher
 
     def missing(left, right, expected_class)
       compare(left, expected_class) { |k|
-        "#{"#{k.inspect}=>" if expected_class == Hash}  #{left[k]}" unless right.has_key?(k)
+        "#{"#{k.inspect}=>" if expected_class == Hash}  #{left[k].inspect}" unless right.has_key?(k) || @optional_keys.include?(k)
       }
     end
 
@@ -197,6 +219,7 @@ module DiffMatcher
           d = expected.diff(actual, @opts)
                       [d.nil?                                      , :match_matcher, d]
         when Class  ; [actual.is_a?(expected)                         , :match_class  ]
+        when Range  ; [expected.include?(actual)                      , :match_range  ]
         when Proc   ; [expected.call(actual)                          , :match_proc   ]
         when Regexp ; [actual.is_a?(String) && actual.match(expected) , :match_regexp ]
         else          [actual == expected                             , :match_value  ]
