@@ -147,7 +147,7 @@ Where, - 1 missing, + 1 additional, : 2 match_class
 
 When `actual` is an array with a *limited* size use an `AllMatcher` to match
 against *all* the elements in the array adhering to the limits of `:min`
-and or `:max`.
+and or `:max` or `:size` (where `:size` is a Fixnum or range of Fixnum).
 
 ``` ruby
 puts DiffMatcher::difference(DiffMatcher::AllMatcher.new(Fixnum, :min=>3), [1, 2])
@@ -159,6 +159,15 @@ puts DiffMatcher::difference(DiffMatcher::AllMatcher.new(Fixnum, :min=>3), [1, 2
 Where, - 1 missing, : 2 match_class
 ```
 
+``` ruby
+puts DiffMatcher::difference(DiffMatcher::AllMatcher.new(Fixnum, :size=>3..5), [1, 2])
+[
+  : 1,
+  : 2,
+  - Fixnum
+]
+Where, - 1 missing, : 2 match_class
+```
 
 When `actual` is an array of unknown size *and* `expected` can take
 multiple forms use a `Matcher` inside of an `AllMatcher` to match

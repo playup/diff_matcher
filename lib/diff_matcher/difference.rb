@@ -50,9 +50,19 @@ module DiffMatcher
   class AllMatcher < Matcher
     def expected(e, actual)
       opts = expected_opts(e)
+      size = opts[:size]
+      case size
+      when Fixnum
+        min = size
+        max = size
+      when Range
+        min = size.first
+        max = size.last
+      else
+        min = opts[:min] || 0
+        max = opts[:max] || 1_000_000 # MAXINT?
+      end
       size = actual.size
-      min = opts[:min] || 0
-      max = opts[:max] || 1_000_000 # MAXINT?
       size = size > min ? (size < max ? size : max) : min
       [e]*size
     end

@@ -476,6 +476,40 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
           Where, + 1 additional, : 2 match_class
           EOF
       end
+
+      context "with a size restriction" do
+        expected, same, different =
+          DiffMatcher::AllMatcher.new(String, :size=>2),
+          %w(ay be),
+          %w(ay be ci)
+
+        it_behaves_like "a diff matcher", expected, same, different,
+          <<-EOF
+          [
+            : "ay",
+            : "be",
+          + "ci"
+          ]
+          Where, + 1 additional, : 2 match_class
+          EOF
+      end
+
+      context "with a size restriction range" do
+        expected, same, different =
+          DiffMatcher::AllMatcher.new(String, :size=>0..2),
+          %w(ay be),
+          %w(ay be ci)
+
+        it_behaves_like "a diff matcher", expected, same, different,
+          <<-EOF
+          [
+            : "ay",
+            : "be",
+          + "ci"
+          ]
+          Where, + 1 additional, : 2 match_class
+          EOF
+      end
     end
 
     context "a DiffMatcher::AllMatcher using an or-ed DiffMatcher::Matcher," do
