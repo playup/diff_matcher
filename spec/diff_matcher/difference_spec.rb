@@ -9,13 +9,15 @@ def fix_EOF_problem(s)
   # <<-EOF isn't working like its meant to :(
   whitespace = s.split("\n")[-1][/^[ ]+/]
   indentation = whitespace ? whitespace.size : 0
-  s.gsub("\n#{" " * indentation}", "\n").strip
+  s.gsub("\n#{" " * indentation}", "\n").tap { |result|
+    result.strip! if whitespace
+  }
 end
 
 
-shared_examples_for "a matcher" do |expected, expected2, same, different, difference, opts|
+shared_examples_for "an or-ed matcher" do |expected, expected2, same, different, difference, opts|
   opts ||= {}
-  context "with #{opts.size > 0 ? opts_to_s(opts) : "no opts"}" do
+  context "where expected=#{expected.inspect}, expected2=#{expected2.inspect}" do
     describe "diff(#{same.inspect}#{opts_to_s(opts)})" do
       let(:expected ) { expected }
       let(:expected2) { expected }
@@ -32,7 +34,7 @@ shared_examples_for "a matcher" do |expected, expected2, same, different, differ
       let(:opts     ) { opts      }
 
       it { should_not be_nil } unless RUBY_1_9
-      it { should == fix_EOF_problem(difference)+"\n" } if RUBY_1_9
+      it { should == fix_EOF_problem(difference) } if RUBY_1_9
     end
   end
 end
@@ -44,23 +46,24 @@ describe DiffMatcher::Matcher do
     {:name   => String   , :age    => Integer },
     {:name   => "Peter"  , :age    => 21      },
     {:name   => 21       , :age    => 21      },
-    <<-EOF
-    {
-      :name=>\e[31m- \e[1mString\e[0m\e[33m+ \e[1m21\e[0m,
-      :age=>\e[34m: \e[1m21\e[0m
-    }
-    EOF
+    "{\n  :name=>\e[31m- \e[1mString\e[0m\e[33m+ \e[1m21\e[0m,\n  :age=>\e[34m: \e[1m21\e[0m\n}\n"
 
   describe "DiffMatcher::Matcher[expected, expected2]," do
     subject { DiffMatcher::Matcher[expected, expected2].diff(actual) }
 
-    it_behaves_like "a matcher", expected, expected2, same, different, difference
-  end
+    it_behaves_like "an or-ed matcher", expected, expected2, same, different, difference
 
-  describe "DiffMatcher::Matcher[expected] | DiffMatcher::Matcher[expected2])" do
-    subject { (DiffMatcher::Matcher[expected] | DiffMatcher::Matcher[expected2]).diff(actual) }
+    context "when Matchers are or-ed it works the same" do
+      subject { (DiffMatcher::Matcher[expected] | DiffMatcher::Matcher[expected2]).diff(actual) }
 
-    it_behaves_like "a matcher", expected, expected2, same, different, difference
+      it_behaves_like "an or-ed matcher", expected, expected2, same, different, difference
+    end
+
+    context "expecteds are in different order it still uses the closest dif" do
+      subject { DiffMatcher::Matcher[expected2, expected].diff(actual) }
+
+      it_behaves_like "an or-ed matcher", expected2, expected, same, different, difference
+    end
   end
 end
 
@@ -118,6 +121,36 @@ shared_examples_for "a diff matcher" do |expected, same, different, difference, 
     end
   end
 end
+
+describe "DiffMatcher::Matcher[expected].diff(actual, opts)" do
+  subject { DiffMatcher::Matcher[expected].diff(actual, opts) }
+
+  describe "when expected is an instance," do
+    context "of Fixnum," do
+      expected, same, different =
+        1,
+        1,
+        2
+
+      it_behaves_like "a diff matcher", expected, same, different,
+        "\e[31m- \e[1m1\e[0m\e[33m+ \e[1m2\e[0m", {}
+    end
+  end
+
+  describe "when expected is an instance," do
+    context "of Hash, with optional keys" do
+      expected, same, different =
+        {:a=>1, :b=>Fixnum},
+        {:a=>1},
+        {:a=>2}
+
+      it_behaves_like "a diff matcher", expected, same, different,
+        "{\n  :a=>\e[31m- \e[1m1\e[0m\e[33m+ \e[1m2\e[0m\n}\n",
+        {:optional_keys=>[:b]}
+    end
+  end
+end
+
 
 describe "DiffMatcher::difference(expected, actual, opts)" do
   subject { DiffMatcher::difference(expected, actual, opts) }
@@ -283,6 +316,19 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
             EOF
         end
       end
+    end
+
+    context "of Range," do
+      expected, same, different =
+        (1..3),
+        2,
+        4
+
+      it_behaves_like "a diff matcher", expected, same, different,
+        <<-EOF
+        - 1..3+ 4
+        Where, - 1 missing, + 1 additional
+        EOF
     end
 
     context "of Hash," do
@@ -484,6 +530,40 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
         EOF
 
       end
+
+      context "with a min restriction" do
+        expected, same, different =
+          DiffMatcher::AllMatcher.new(String, :min=>3),
+          %w(ay be ci),
+          %w(ay be)
+
+        it_behaves_like "a diff matcher", expected, same, different,
+          <<-EOF
+          [
+          : "ay",
+          : "be",
+          - String
+          ]
+          Where, - 1 missing, : 2 match_class
+          EOF
+      end
+
+      context "with a max restriction" do
+        expected, same, different =
+          DiffMatcher::AllMatcher.new(String, :max=>2),
+          %w(ay be),
+          %w(ay be ci)
+
+        it_behaves_like "a diff matcher", expected, same, different,
+          <<-EOF
+          [
+          : "ay",
+          : "be",
+          + "ci"
+          ]
+          Where, + 1 additional, : 2 match_class
+          EOF
+      end
     end
 
     context "a DiffMatcher::AllMatcher using an or-ed DiffMatcher::Matcher," do
@@ -538,11 +618,11 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
 
   context "when expected has multiple items," do
     expected, same, different =
-      [ 1,  2, /\d/, Fixnum, lambda { |x| (4..6).include? x } ],
-      [ 1,  2, "3" , 4     , 5                                ],
-      [ 0,  2, "3" , 4     , 5                                ]
+      [ 1,  2, /\d/, Fixnum, 4..6 , lambda { |x| x % 6 == 0 } ],
+      [ 1,  2, "3" , 4     , 5    , 6                         ],
+      [ 0,  2, "3" , 4     , 5    , 6                         ]
 
-    describe "it shows regex, class, proc matches and matches" do
+    describe "it shows regex, class, range, proc matches and matches" do
       it_behaves_like "a diff matcher", expected, same, different,
         <<-EOF
         [
@@ -550,9 +630,10 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
           2,
         ~ "(3)",
         : 4,
-        { 5
+        . 5,
+        { 6
         ]
-        Where, - 1 missing, + 1 additional, ~ 1 match_regexp, : 1 match_class, { 1 match_proc
+        Where, - 1 missing, + 1 additional, ~ 1 match_regexp, : 1 match_class, . 1 match_range, { 1 match_proc
         EOF
     end
 
@@ -574,9 +655,10 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
           2,
         ~ "(3)",
         : 4,
-        { 5
+        . 5,
+        { 6
         ]
-        Where, - 1 missing, + 1 additional, ~ 1 match_regexp, : 1 match_class, { 1 match_proc
+        Where, - 1 missing, + 1 additional, ~ 1 match_regexp, : 1 match_class, . 1 match_range, { 1 match_proc
         EOF
     end
 
@@ -588,9 +670,10 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
         \e[0m\e[0m  \e[1m2\e[0m,
         \e[0m\e[32m~ \e[0m"\e[32m(\e[1m3\e[0m\e[32m)\e[0m"\e[0m,
         \e[0m\e[34m: \e[1m4\e[0m,
-        \e[0m\e[36m{ \e[1m5\e[0m
+        \e[0m\e[36m. \e[1m5\e[0m,
+        \e[0m\e[36m{ \e[1m6\e[0m
         \e[0m]
-        Where, \e[31m- \e[1m1 missing\e[0m, \e[33m+ \e[1m1 additional\e[0m, \e[32m~ \e[1m1 match_regexp\e[0m, \e[34m: \e[1m1 match_class\e[0m, \e[36m{ \e[1m1 match_proc\e[0m
+        Where, \e[31m- \e[1m1 missing\e[0m, \e[33m+ \e[1m1 additional\e[0m, \e[32m~ \e[1m1 match_regexp\e[0m, \e[34m: \e[1m1 match_class\e[0m, \e[36m. \e[1m1 match_range\e[0m, \e[36m{ \e[1m1 match_proc\e[0m
         EOF
 
       context "on a white background" do
@@ -601,9 +684,10 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
           \e[0m\e[0m  \e[1m2\e[0m,
           \e[0m\e[32m~ \e[0m"\e[32m(\e[1m3\e[0m\e[32m)\e[0m"\e[0m,
           \e[0m\e[34m: \e[1m4\e[0m,
-          \e[0m\e[36m{ \e[1m5\e[0m
+          \e[0m\e[36m. \e[1m5\e[0m,
+          \e[0m\e[36m{ \e[1m6\e[0m
           \e[0m]
-          Where, \e[31m- \e[1m1 missing\e[0m, \e[35m+ \e[1m1 additional\e[0m, \e[32m~ \e[1m1 match_regexp\e[0m, \e[34m: \e[1m1 match_class\e[0m, \e[36m{ \e[1m1 match_proc\e[0m
+          Where, \e[31m- \e[1m1 missing\e[0m, \e[35m+ \e[1m1 additional\e[0m, \e[32m~ \e[1m1 match_regexp\e[0m, \e[34m: \e[1m1 match_class\e[0m, \e[36m. \e[1m1 match_range\e[0m, \e[36m{ \e[1m1 match_proc\e[0m
           EOF
       end
     end

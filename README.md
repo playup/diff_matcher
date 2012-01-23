@@ -105,20 +105,37 @@ puts DiffMatcher::difference([1], [1, 2])
 ```
 
 
-When `expected` can take multiple forms use a `Matcher`
+When `expected` is a `Hash` with optional keys use a `Matcher`.
 
 ``` ruby
-puts DiffMatcher::difference(DiffMatcher::Matcher[Fixnum,Float], "3")
-- Float+ "3"
+puts DiffMatcher::difference(
+  DiffMatcher::Matcher.new({:name=>String, :age=>Fixnum}, :optional_keys=>[:age]),
+  {:name=>0}
+)
+{
+  :name=>- String+ 0
+}
 Where, - 1 missing, + 1 additional
 ```
 
 
-When `actual` is an array of unknown size use an `AllMatcher` to match
+When `expected` can take multiple forms use some `Matcher`s `||`ed together.
+
+``` ruby
+puts DiffMatcher::difference(DiffMatcher::Matcher.new(Fixnum) || DiffMatcher.new(Float), "3")
+- Float+ "3"
+Where, - 1 missing, + 1 additional
+```
+(NB. `DiffMatcher::Matcher[Fixnum, Float]` can be used as a shortcut for 
+     `DiffMatcher::Matcher.new(Fixnum) || DiffMatcher.new(Float)`
+)
+
+
+When `actual` is an array of *unknown* size use an `AllMatcher` to match
 against *all* the elements in the array.
 
 ``` ruby
-puts DiffMatcher::difference(DiffMatcher::AllMatcher[Fixnum], [1, 2, "3"])
+puts DiffMatcher::difference(DiffMatcher::AllMatcher.new(Fixnum), [1, 2, "3"])
 [
   : 1,
   : 2,
@@ -128,15 +145,30 @@ Where, - 1 missing, + 1 additional, : 2 match_class
 ```
 
 
+When `actual` is an array with a *limited* size use an `AllMatcher` to match
+against *all* the elements in the array adhering to the limits of `:min`
+and or `:max`.
+
+``` ruby
+puts DiffMatcher::difference(DiffMatcher::AllMatcher.new(Fixnum, :min=>3), [1, 2])
+[
+  : 1,
+  : 2,
+  - Fixnum
+]
+Where, - 1 missing, : 2 match_class
+```
+
+
 When `actual` is an array of unknown size *and* `expected` can take
 multiple forms use a `Matcher` inside of an `AllMatcher` to match
 against *all* the elements in the array in any of the forms.
 
 ``` ruby
 puts DiffMatcher::difference(
-  DiffMatcher::AllMatcher[
+  DiffMatcher::AllMatcher.new(
     DiffMatcher::Matcher[Fixnum, Float]
-  ],
+  ),
   [1, 2.00, "3"]
 )
 [
@@ -176,6 +208,7 @@ The items shown in a difference are prefixed as follows:
     match regexp  => "~ "
     match class   => ": "
     match matcher => "| "
+    match proc    => ". "
     match proc    => "{ "
 
 
@@ -191,6 +224,7 @@ Using the `:default` colour scheme items shown in a difference are coloured as f
     match regexp  => green
     match class   => blue
     match matcher => blue
+    match range   => cyan
     match proc    => cyan
 
 Other colour schemes, eg. `:color_scheme=>:white_background` will use different colour mappings.
