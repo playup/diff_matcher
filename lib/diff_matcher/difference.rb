@@ -185,6 +185,8 @@ module DiffMatcher
         actual = actual.split("\n").map { |line|
           line.codepoints.to_a.each_with_index.inject({}) { |h, (v, i)| h.update(i=>v.chr) }
         }
+#        expected = expected.codepoints.to_a.each_with_index.inject({}) { |h, (v, i)| h.update(i=>v.chr) }
+#        actual = actual.codepoints.to_a.each_with_index.inject({}) { |h, (v, i)| h.update(i=>v.chr) }
         diff(expected, actual, String)
       else
         actual
@@ -242,10 +244,7 @@ module DiffMatcher
       case expected
         when Hash ; "{\n#{items.join(",\n")}\n}\n"
         when Array; "[\n#{items.join(",\n")}\n]\n"
-        #when String; items.map(&:to_s).map { |c| c.gsub(/((?:[^\[m])[0-9]+(?:[^m\e]))+/) { |x| x.to_i.chr } }.join
-        when String; items.join("\n")
-        ##  item.match(/^[0-9]+$/) ? item.to_i.chr : item.gsub(/((?:[^\[m])[0-9]+(?:[^m\e]))+/) { |x| x.to_i.chr }  # XXX - yuk
-        #when String; items.map(&:to_s).map { |c| c.sub(/^[ ][ ]/, '') }.join
+        when String; items.map { |x| x[/^\e\[0m  \e\[1m"(.+)"\e\[0m$/, 1] || x.gsub('"', "") }.join
         else items.join
       end if items.size > 0
     end

@@ -177,7 +177,10 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
 
       it_behaves_like "a diff matcher", expected, same, different,
         <<-EOF, :color_enabled=>true
-        \e[0mHappy Birthday \e[31m- \e[1mto\e[0m\e[33m+ \e[1mfor\e[0m you
+        \e[0mHappy Birthday to you\e[0m
+        \e[0mHappy Birthday to you\e[0m
+        \e[0mHappy Birthday dear r\e[31m- \e[1mspec\e[0m\e[33m+ \e[1muby\e[0m
+        \e[0mHappy Birthday to you\e[0m
 
         Where, \e[31m- \e[1m1 missing\e[0m, \e[33m+ \e[1m1 additional\e[0m
         EOF
