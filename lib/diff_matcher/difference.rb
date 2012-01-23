@@ -178,7 +178,7 @@ module DiffMatcher
         items_to_s(
           expected,
           (item_types_shown).inject([]) { |a, method|
-            a + send(method, left, right, expected.class).compact.map { |item| markup(method, item) }
+            a + send(method, left, right, expected).compact.map { |item| markup(method, item) }
           }
         )
       else
@@ -199,9 +199,10 @@ module DiffMatcher
       end if expected.is_a? actual.class
     end
 
-    def compare(right, expected_class, default=nil)
-      if [Hash, Array].include? expected_class
-        right && right.keys.tap { |keys| keys.sort if expected_class == Array }.map { |k|
+    def compare(right, expected, default=nil)
+      case expected
+      when Hash, Array
+        right && right.keys.tap { |keys| keys.sort if expected.is_a? Array }.map { |k|
           yield k
         }
       else
@@ -209,20 +210,20 @@ module DiffMatcher
       end
     end
 
-    def different(left, right, expected_class)
-      compare(right, expected_class, difference_to_s(right, left)) { |k|
-        "#{"#{k.inspect}=>" if expected_class == Hash}#{right[k]}" if right[k] and left.has_key?(k)
+    def different(left, right, expected)
+      compare(right, expected, difference_to_s(right, left)) { |k|
+        "#{"#{k.inspect}=>" if expected.is_a? Hash}#{right[k]}" if right[k] and left.has_key?(k)
       }
     end
 
-    def missing(left, right, expected_class)
-      compare(left, expected_class) { |k|
-        "#{"#{k.inspect}=>" if expected_class == Hash}#{left[k].inspect}" unless right.has_key?(k) || @optional_keys.include?(k)
+    def missing(left, right, expected)
+      compare(left, expected) { |k|
+        "#{"#{k.inspect}=>" if expected.is_a? Hash}#{left[k].inspect}" unless right.has_key?(k) || @optional_keys.include?(k)
       }
     end
 
-    def additional(left, right, expected_class)
-      missing(right, left, expected_class)
+    def additional(left, right, expected)
+      missing(right, left, expected)
     end
 
     def match?(expected, actual)

@@ -280,6 +280,22 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
       end
     end
 
+    context "of an Array derived class," do
+      class ArrayChild < Array; end
+      expected, same, different =
+        ArrayChild[ 1 ],
+        ArrayChild[ 1 ],
+        ArrayChild[ 2 ]
+
+      it_behaves_like "a diff matcher", expected, same, different,
+        <<-EOF, {}
+        [
+          - 1+ 2
+        ]
+        Where, - 1 missing, + 1 additional
+        EOF
+    end
+
     context "of Range," do
       expected, same, different =
         (1..3),
@@ -339,6 +355,22 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
             EOF
         end
       end
+    end
+
+    context "of a Hash derived class," do
+      class HashChild < Hash; end
+      expected, same, different =
+        HashChild["a",1],
+        HashChild["a",1],
+        HashChild["a",2]
+
+      it_behaves_like "a diff matcher", expected, same, different,
+        <<-EOF
+        {
+          "a"=>- 1+ 2
+        }
+        Where, - 1 missing, + 1 additional
+        EOF
     end
   end
 
