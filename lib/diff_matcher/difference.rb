@@ -50,9 +50,19 @@ module DiffMatcher
   class AllMatcher < Matcher
     def expected(e, actual)
       opts = expected_opts(e)
+      size = opts[:size]
+      case size
+      when Fixnum
+        min = size
+        max = size
+      when Range
+        min = size.first
+        max = size.last
+      else
+        min = opts[:min] || 0
+        max = opts[:max] || 1_000_000 # MAXINT?
+      end
       size = actual.size
-      min = opts[:min] || 0
-      max = opts[:max] || 1_000_000 # MAXINT?
       size = size > min ? (size < max ? size : max) : min
       [e]*size
     end
@@ -142,6 +152,14 @@ module DiffMatcher
       @item_types ||= @ignore_additional ? [:missing] : [:missing, :additional]
     end
 
+    def item_types_shown
+      @item_types_shown ||= lambda {
+        ret = [:different] + item_types
+        ret += [:additional] unless @quiet
+        ret.uniq
+      }.call
+    end
+
     def matches_shown
       @matches_shown ||= lambda {
         ret = []
@@ -159,8 +177,8 @@ module DiffMatcher
         right = diff(actual, expected)
         items_to_s(
           expected,
-          [:different, :missing, :additional].inject([]) { |a, method|
-            a + send(method, left, right, expected.class).compact.map { |item| markup(method, item) }
+          (item_types_shown).inject([]) { |a, method|
+            a + send(method, left, right, expected).compact.map { |item| markup(method, item) }
           }
         )
       else
@@ -183,9 +201,10 @@ module DiffMatcher
       end if expected.is_a? actual.class
     end
 
-    def compare(right, expected_class, default=nil)
-      if [Hash, Array].include? expected_class
-        right && right.keys.tap { |keys| keys.sort if expected_class == Array }.map { |k|
+    def compare(right, expected, default=nil)
+      case expected
+      when Hash, Array
+        right && right.keys.tap { |keys| keys.sort if expected.is_a? Array }.map { |k|
           yield k
         }
       else
@@ -193,24 +212,24 @@ module DiffMatcher
       end
     end
 
-    def different(left, right, expected_class)
-      compare(right, expected_class, difference_to_s(right, left)) { |k|
+    def different(left, right, expected)
+      compare(right, expected, difference_to_s(right, left)) { |k|
         if right[k] and left.has_key?(k)
           pad = %w([ {).include?(right[k][0]) ? "" : "  " # pad unless value is a Hash or Array difference
-          result = "#{"#{pad}#{k.inspect}=>" if expected_class == Hash}#{right[k]}"
+          result = "#{"#{pad}#{k.inspect}=>" if expected.is_a? Hash}#{right[k]}"
           result.scan("\n").size > 0 ? indent(result) : result
         end
       }
     end
 
-    def missing(left, right, expected_class)
-      compare(left, expected_class) { |k|
-        "#{"#{k.inspect}=>" if expected_class == Hash}  #{left[k].inspect}" unless right.has_key?(k) || @optional_keys.include?(k)
+    def missing(left, right, expected)
+      compare(left, expected) { |k|
+        "#{"#{k.inspect}=>" if expected.is_a? Hash}  #{left[k].inspect}" unless right.has_key?(k) || @optional_keys.include?(k)
       }
     end
 
-    def additional(left, right, expected_class)
-      missing(right, left, expected_class)
+    def additional(left, right, expected)
+      missing(right, left, expected)
     end
 
     def match?(expected, actual)

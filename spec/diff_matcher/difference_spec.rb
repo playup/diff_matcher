@@ -317,6 +317,22 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
       end
     end
 
+    context "of an Array derived class," do
+      class ArrayChild < Array; end
+      expected, same, different =
+        ArrayChild[ 1 ],
+        ArrayChild[ 1 ],
+        ArrayChild[ 2 ]
+
+      it_behaves_like "a diff matcher", expected, same, different,
+        <<-EOF, {}
+        [
+        - 1+ 2
+        ]
+        Where, - 1 missing, + 1 additional
+        EOF
+    end
+
     context "of Range," do
       expected, same, different =
         (1..3),
@@ -426,6 +442,22 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
             EOF
         end
       end
+    end
+
+    context "of a Hash derived class," do
+      class HashChild < Hash; end
+      expected, same, different =
+        HashChild["a",1],
+        HashChild["a",1],
+        HashChild["a",2]
+
+      it_behaves_like "a diff matcher", expected, same, different,
+        <<-EOF
+        {
+          "a"=>- 1+ 2
+        }
+        Where, - 1 missing, + 1 additional
+        EOF
     end
   end
 
@@ -550,6 +582,40 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
       context "with a max restriction" do
         expected, same, different =
           DiffMatcher::AllMatcher.new(String, :max=>2),
+          %w(ay be),
+          %w(ay be ci)
+
+        it_behaves_like "a diff matcher", expected, same, different,
+          <<-EOF
+          [
+          : "ay",
+          : "be",
+          + "ci"
+          ]
+          Where, + 1 additional, : 2 match_class
+          EOF
+      end
+
+      context "with a size restriction" do
+        expected, same, different =
+          DiffMatcher::AllMatcher.new(String, :size=>2),
+          %w(ay be),
+          %w(ay be ci)
+
+        it_behaves_like "a diff matcher", expected, same, different,
+          <<-EOF
+          [
+          : "ay",
+          : "be",
+          + "ci"
+          ]
+          Where, + 1 additional, : 2 match_class
+          EOF
+      end
+
+      context "with a size restriction range" do
+        expected, same, different =
+          DiffMatcher::AllMatcher.new(String, :size=>0..2),
           %w(ay be),
           %w(ay be ci)
 
