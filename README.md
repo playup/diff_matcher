@@ -255,6 +255,10 @@ Similar gems
   * <http://github.com/postmodern/tdiff> (Calculates the differences between two tree-like structures)
   * <http://github.com/Blargel/easy_diff> (Recursive diff, merge, and unmerge for hashes and arrays)
 
+### JSON matchers
+  * <http://github.com/collectiveidea/json_spec> (Easily handle JSON in RSpec and Cucumber)
+  * <http://github.com/lloyd/JSONSelect> (CSS-like selectors for JSON)
+
 
 Why another differ?
 ---
@@ -270,6 +274,8 @@ It has extra functionality in also being able to recursively merge hashes and ar
 
 DiffMatcher can match using not only regexes but classes and procs.
 And the difference string that it outputs can be formatted in several ways as needed.
+
+As for matching JSON, the matchers above work well, but don't allow for matching patterns.
 
 
 Use with rspec
