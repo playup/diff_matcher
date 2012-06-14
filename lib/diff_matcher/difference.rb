@@ -66,11 +66,6 @@ module DiffMatcher
       size = size > min ? (size < max ? size : max) : min
       [e]*size
     end
-
-    def diff(actual, opts={})
-      raise NotAnArray unless actual.is_a?(Array)
-      super
-    end
   end
 
   class Difference

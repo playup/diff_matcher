@@ -90,7 +90,7 @@ describe "DiffMatcher::AllMatcher[expected]" do
     context "when actual is not an array" do
       let(:actual) { 'a' }
 
-      it { expect { subject }.to raise_error(DiffMatcher::NotAnArray) }
+      it { should eql "\e[31m- \e[1m[1]\e[0m\e[33m+ \e[1m\"a\"\e[0m" }
     end
   end
 end
