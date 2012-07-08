@@ -90,19 +90,34 @@ module DiffMatcher
         :match_proc    => [CYAN  , "{"]
     }
 
-    COLOR_SCHEMES = {
-      :default          => DEFAULT_COLOR_SCHEME,
-      :white_background => DEFAULT_COLOR_SCHEME.merge(
-        :additional    => [MAGENTA, "+"]
-      ) 
-    }
+    class << self
+      attr_reader :color_scheme
+      attr_writer :color_enabled, :color_schemes
+
+      def color_schemes
+        @color_schemes ||= {
+          :default          => DEFAULT_COLOR_SCHEME,
+          :white_background => DEFAULT_COLOR_SCHEME.merge(
+            :additional    => [MAGENTA, "+"]
+          )
+        }
+      end
+
+      def color_scheme=(value)
+        @color_scheme = color_schemes[value]
+      end
+
+      def color_enabled
+        @color_enabled.nil? ? !!@color_scheme : @color_enabled
+      end
+    end
 
     def initialize(expected, actual, opts={})
       @opts = opts
       @ignore_additional = opts[:ignore_additional]
       @quiet             = opts[:quiet]
-      @color_enabled     = opts[:color_enabled] || !!opts[:color_scheme]
-      @color_scheme      = COLOR_SCHEMES[opts[:color_scheme] || :default]
+      @color_scheme      = self.class.color_schemes[opts[:color_scheme]] || self.class.color_scheme || self.class.color_schemes[:default]
+      @color_enabled     = (opts[:color_enabled].nil? && opts[:color_scheme].nil?) ? self.class.color_enabled : !!opts[:color_scheme] || opts[:color_enabled]
       @optional_keys = opts.delete(:optional_keys) || []
       @dif_count = 0
       @difference = difference(expected, actual)
