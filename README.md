@@ -258,6 +258,7 @@ Similar gems
 ### JSON matchers
   * <http://github.com/collectiveidea/json_spec> (Easily handle JSON in RSpec and Cucumber)
   * <http://github.com/lloyd/JSONSelect> (CSS-like selectors for JSON)
+  * <http://github.com/chancancode/json_expressions> (JSON matchmaking for all your API testing needs)
 
 
 Why another differ?
@@ -276,6 +277,15 @@ DiffMatcher can match using not only regexes but classes and procs.
 And the difference string that it outputs can be formatted in several ways as needed.
 
 As for matching JSON, the matchers above work well, but don't allow for matching patterns.
+
+#### Update 2012/07/14:
+
+[json_expressions](http://github.com/chancancode/json_expressions) (as mentioned in [Ruby5 - Episode #288](http://ruby5.envylabs.com/episodes/292-episode-288-july-13th-2012)) *does*
+do pattern matching and also looks like a good alternative to diff_matcher, it has the following advantages:
+  * define capture symbols that can be used to extract values from the matched object
+  * (if a symbol is used multiple times, it will make sure all the extracted values match)
+  * can optionally match unordered arrays (diff_matcher only matches ordered arrays)
+  * because it doesn't bother generating a pretty difference string it might be faster
 
 
 Use with rspec
