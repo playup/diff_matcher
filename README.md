@@ -217,7 +217,7 @@ The items shown in a difference are prefixed as follows:
     match regexp  => "~ "
     match class   => ": "
     match matcher => "| "
-    match proc    => ". "
+    match range   => ". "
     match proc    => "{ "
 
 
