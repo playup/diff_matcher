@@ -74,6 +74,13 @@ p DiffMatcher::difference(/[a-z]/, "a")
 # => nil
 ```
 
+When `actual` is a fixnum that matches the `expected` range
+
+``` ruby
+p DiffMatcher::difference(1..3, 3)
+# => nil
+```
+
 When `actual` is passed to an `expected` proc and it returns true
 
 ``` ruby
