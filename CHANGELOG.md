@@ -3,8 +3,10 @@
 ### v2.3.2
 
   Summarize Hash and Array output in diff with "..."
+```
   eg.
   - [...]+ {...}
+```
 
 ### v2.2.3
 
