@@ -185,7 +185,7 @@ module DiffMatcher
       if [:missing, :additional].include?(method)
         if item.match(/\A\[.*\]\Z/) and [:missing, :additional].include?(method)
           '[...]'
-        elsif item.match(/\A{.*}\Z/)
+        elsif item.match(/\A\{.*\}\Z/)
           '{...}'
         else
           item
