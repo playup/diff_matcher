@@ -90,7 +90,7 @@ describe "DiffMatcher::AllMatcher[expected]" do
     context "when actual is not an array" do
       let(:actual) { 'a' }
 
-      it { should eql "\e[31m- \e[1m[1]\e[0m\e[33m+ \e[1m\"a\"\e[0m" }
+      it { should eql "\e[31m- \e[1m[...]\e[0m\e[33m+ \e[1m\"a\"\e[0m" }
     end
   end
 end
@@ -252,6 +252,40 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
           ]
           Where, - 1 missing, + 1 additional
           EOF
+
+        context "where actual has additional items, it summarizes the Array item with ... and" do
+          expected, same, different =
+            [ 1, 2        ],
+            [ 1, 2, [ 3 ] ],
+            [ 0, 2, [ 3 ] ]
+
+          it_behaves_like "a diff matcher", expected, same, different,
+            <<-EOF, :ignore_additional=>true
+            [
+              - 1+ 0,
+              2,
+            + [...]
+            ]
+            Where, - 1 missing, + 2 additional
+            EOF
+        end
+
+        context "where actual has additional items, it summarizes the Hash item with ... and" do
+          expected, same, different =
+            [ 1, 2                 ],
+            [ 1, 2, { :a=> [ 3 ] } ],
+            [ 0, 2, { :a=> [ 3 ] } ]
+
+          it_behaves_like "a diff matcher", expected, same, different,
+            <<-EOF, :ignore_additional=>true
+            [
+              - 1+ 0,
+              2,
+            + {...}
+            ]
+            Where, - 1 missing, + 2 additional
+            EOF
+        end
       end
 
       context "where actual has missing items" do
@@ -276,6 +310,19 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
           - 3
           ]
           Where, - 1 missing
+          EOF
+      end
+
+      context "where actual is not an array, it summarizes the diff with ... and" do
+        expected, same, different =
+          [ 1 ],
+          [ 1 ],
+          { 0 => 1 }
+
+        it_behaves_like "a diff matcher", expected, same, different,
+          <<-EOF
+          - [...]+ {...}
+          Where, - 1 missing, + 1 additional
           EOF
       end
     end
@@ -323,7 +370,7 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
         Where, - 1 missing, + 1 additional
         EOF
 
-      context "with keys of differing classes" do
+      context "with values of differing classes" do
         expected, same, different =
           { "a"=>{ "b"=>1 } },
           { "a"=>{ "b"=>1 } },
@@ -332,7 +379,7 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
         it_behaves_like "a diff matcher", expected, same, different,
           <<-EOF
           {
-            "a"=>- {"b"=>1}+ ["b", 1]
+            "a"=>- {...}+ [...]
           }
           Where, - 1 missing, + 1 additional
           EOF

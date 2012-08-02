@@ -181,6 +181,20 @@ module DiffMatcher
       }.call
     end
 
+    def summarize_item_str(item, method)
+      if [:missing, :additional].include?(method)
+        if item.match(/\A\[.*\]\Z/) and [:missing, :additional].include?(method)
+          '[...]'
+        elsif item.match(/\A{.*}\Z/)
+          '{...}'
+        else
+          item
+        end
+      else
+        item
+      end
+    end
+
     def difference(expected, actual)
       if actual.is_a? expected.class
         left = diff(expected, actual)
@@ -188,7 +202,9 @@ module DiffMatcher
         items_to_s(
           expected,
           (item_types_shown).inject([]) { |a, method|
-            a + send(method, left, right, expected).compact.map { |item| markup(method, item) }
+            a + send(method, left, right, expected).compact.map { |item|
+              markup(method, summarize_item_str(item, method))
+            }
           }
         )
       else
@@ -269,22 +285,43 @@ module DiffMatcher
       markup(match_type, actual) if matches_shown.include?(match_type)
     end
 
+    def summarize_item(item)
+      case item
+      when Array
+        '[...]'
+      when Hash
+        '{...}'
+      else
+        item.inspect
+      end
+    end
+
     def difference_to_s(expected, actual)
       match, match_type, d = match?(expected, actual)
       if match
         match_to_s(expected, actual.inspect, match_type)
       else
-        match_type == :match_matcher ? d :
-          "#{markup(:missing, expected.inspect)}#{markup(:additional, actual.inspect)}"
+        case match_type
+        when :match_matcher
+          d
+        else
+          exp, act = if [expected, actual].any? { |item| item.is_a?(Proc) }
+            [expected, actual].map { |item| item.inspect }
+          else
+            [expected, actual].map { |item| summarize_item(item) }
+          end
+
+          "#{markup(:missing, exp)}#{markup(:additional, act)}"
+        end
       end
     end
 
-    def markup(item_type, item)
-      if item_type == :different
+    def markup(match_type, item)
+      if match_type == :different
         item.split("\n").map {|line| "  #{line}"}.join("\n") if item
       else
-        color, prefix = @color_scheme[item_type]
-        "#{color}#{prefix+' ' if prefix}#{BOLD if color and item_type != :match_regexp}#{RESET if item_type == :match_regexp}#{item}#{RESET if color}" if item
+        color, prefix = @color_scheme[match_type]
+        "#{color}#{prefix+' ' if prefix}#{BOLD if color and match_type != :match_regexp}#{RESET if match_type == :match_regexp}#{item}#{RESET if color}" if item
       end if item
     end
   end
