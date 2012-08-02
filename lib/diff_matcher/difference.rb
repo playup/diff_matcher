@@ -1,4 +1,4 @@
-require_relative './escape_to_html'
+require 'diff_matcher/escape_to_html'
 
 module DiffMatcher
 
