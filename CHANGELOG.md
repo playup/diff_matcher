@@ -1,5 +1,9 @@
 # Changelog
 
+### v2.3.3
+
+  Allow HTML output using `:html_output=>true` option
+
 ### v2.3.2
 
   Summarize `Hash` and `Array` output in diff with `"..."`

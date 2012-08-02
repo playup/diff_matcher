@@ -214,6 +214,16 @@ puts DiffMatcher::difference([Fixnum, 2], [1], :quiet=>true)
 # => Where, - 1 missing
 ```
 
+`:html_output=>true` will convert ansii escape codes to html spans
+
+``` ruby
+puts DiffMatcher::difference(1, 2, :html_output=>true)
+<pre>
+<span style="color:red">- <b>1</b></span><span style="color:yellow">+ <b>2</b></span>
+Where, <span style="color:red">- <b>1 missing</b></span>, <span style="color:yellow">+ <b>1 additional</b></span>
+</pre>
+```
+
 #### Prefixes
 
 The items shown in a difference are prefixed as follows:

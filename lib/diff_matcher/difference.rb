@@ -1,3 +1,5 @@
+require_relative './escape_to_html'
+
 module DiffMatcher
 
   def self.difference(expected, actual, opts={})
@@ -121,6 +123,8 @@ module DiffMatcher
       @optional_keys = opts.delete(:optional_keys) || []
       @dif_count = 0
       @difference = difference(expected, actual)
+      @html_output = opts[:html_output]
+      @color_enabled = true if @html_output
     end
 
     def matching?
@@ -144,7 +148,8 @@ module DiffMatcher
         }.compact.join(", ")
         msg <<  "\nWhere, #{where}" if where.size > 0
 
-        @color_enabled ? msg : msg.gsub(/\e\[\d+m/, "")
+        msg.gsub!(/\e\[\d+m/, "") unless @color_enabled
+        @html_output ? "<pre>\n#{escape_to_html(msg)}\n</pre>" : msg
       end
     end
 

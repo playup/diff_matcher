@@ -750,5 +750,22 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
           EOF
       end
     end
+
+    describe "it shows matches in html" do
+      it_behaves_like "a diff matcher", expected, same, different,
+        <<-EOF , :color_scheme => :white_background, :html_output=>true
+        <pre>
+        [
+          <span style=\"color:red\">- <b>1</b></span><span style=\"color:magenta\">+ <b>0</b></span>,
+          2,
+          <span style=\"color:green\">~ </b></span>\"<span style=\"color:green\">(<b>3</b></span><span style=\"color:green\">)</b></span>\"</b></span>,
+          <span style=\"color:blue\">: <b>4</b></span>,
+          <span style=\"color:cyan\">. <b>5</b></span>,
+          <span style=\"color:cyan\">{ <b>6</b></span>
+        ]
+        Where, <span style=\"color:red\">- <b>1 missing</b></span>, <span style=\"color:magenta\">+ <b>1 additional</b></span>, <span style=\"color:green\">~ <b>1 match_regexp</b></span>, <span style=\"color:blue\">: <b>1 match_class</b></span>, <span style=\"color:cyan\">. <b>1 match_range</b></span>, <span style=\"color:cyan\">{ <b>1 match_proc</b></span>
+        </pre>
+        EOF
+    end
   end
 end
