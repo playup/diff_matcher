@@ -107,10 +107,10 @@ a built-in `Matcher`
 exp = {:name=>String, :age=>Fixnum}
 expected = DiffMatcher::Matcher.new(exp, :optional_keys=>[:age])
 puts DiffMatcher::difference(expected, {:name=>0})
-{
-  :name=>- String+ 0
-}
-Where, - 1 missing, + 1 additional
+# => {
+# =>   :name=>- String+ 0
+# => }
+# => Where, - 1 missing, + 1 additional
 ```
 
 When multiple `expected` values can be matched against, simply wrap them
@@ -121,8 +121,8 @@ exp1 = Fixnum
 exp2 = Float
 expected = DiffMatcher::Matcher.new(exp1) || DiffMatcher::Matcher.new(exp2)
 puts DiffMatcher::difference(expected, "3")
-- Float+ "3"
-Where, - 1 missing, + 1 additional
+# => - Float+ "3"
+# => Where, - 1 missing, + 1 additional
 ```
 
 Or to do the same thing using a shorter syntax
@@ -132,8 +132,8 @@ exp1 = Fixnum
 exp2 = Float
 expected = DiffMatcher::Matcher[exp1, exp2]
 puts DiffMatcher::difference(expected, "3")
-- Float+ "3"
-Where, - 1 missing, + 1 additional
+# => - Float+ "3"
+# => Where, - 1 missing, + 1 additional
 ```
 
 When `actual` is an array of *unknown* size use an `AllMatcher` to match
@@ -143,12 +143,12 @@ against *all* the elements in the array
 exp = Fixnum
 expected = DiffMatcher::AllMatcher.new(exp)
 puts DiffMatcher::difference(expected, [1, 2, "3"])
-[
-  : 1,
-  : 2,
-  - Fixnum+ "3"
-]
-Where, - 1 missing, + 1 additional, : 2 match_class
+# => [
+# =>   : 1,
+# =>   : 2,
+# =>   - Fixnum+ "3"
+# => ]
+# => Where, - 1 missing, + 1 additional, : 2 match_class
 ```
 
 
@@ -160,24 +160,24 @@ and or `:max` or `:size` (where `:size` is a Fixnum or range of Fixnum).
 exp = Fixnum
 expected = DiffMatcher::AllMatcher.new(exp, :min=>3)
 puts DiffMatcher::difference(expected, [1, 2])
-[
-  : 1,
-  : 2,
-  - Fixnum
-]
-Where, - 1 missing, : 2 match_class
+# => [
+# =>   : 1,
+# =>   : 2,
+# =>   - Fixnum
+# => ]
+# => Where, - 1 missing, : 2 match_class
 ```
 
 ``` ruby
 exp = Fixnum
 expected = DiffMatcher::AllMatcher.new(exp, :size=>3..5)
 puts DiffMatcher::difference(expected, [1, 2])
-[
-  : 1,
-  : 2,
-  - Fixnum
-]
-Where, - 1 missing, : 2 match_class
+# => [
+# =>   : 1,
+# =>   : 2,
+# =>   - Fixnum
+# => ]
+# => Where, - 1 missing, : 2 match_class
 ```
 
 When `actual` is an array of unknown size *and* `expected` can take
@@ -190,12 +190,12 @@ exp1 = Fixnum
 exp2 = Float
 expected = DiffMatcher::AllMatcher.new( DiffMatcher::Matcher[Fixnum, Float] )
 puts DiffMatcher::difference(expected, [1, 2.00, "3"])
-[
-  | 1,
-  | 2.0,
-  - Float+ "3"
-]
-Where, - 1 missing, + 1 additional, | 2 match_matcher
+# => [
+# =>   | 1,
+# =>   | 2.0,
+# =>   - Float+ "3"
+# => ]
+# => Where, - 1 missing, + 1 additional, | 2 match_matcher
 ```
 
 ### Options
@@ -221,10 +221,10 @@ puts DiffMatcher::difference([Fixnum, 2], [1], :quiet=>true)
 
 ``` ruby
 puts DiffMatcher::difference(1, 2, :html_output=>true)
-<pre>
-<span style="color:red">- <b>1</b></span><span style="color:yellow">+ <b>2</b></span>
-Where, <span style="color:red">- <b>1 missing</b></span>, <span style="color:yellow">+ <b>1 additional</b></span>
-</pre>
+# => <pre>
+# => <span style="color:red">- <b>1</b></span><span style="color:yellow">+ <b>2</b></span>
+# => Where, <span style="color:red">- <b>1 missing</b></span>, <span style="color:yellow">+ <b>1 additional</b></span>
+# => </pre>
 ```
 
 #### Prefixes
