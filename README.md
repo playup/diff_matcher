@@ -50,54 +50,31 @@ DiffMatcher::difference(expected, actual, opts={})
 
 #### Using plain ruby objects for *expected*
 
-When `actual` == `expected`
-
-``` ruby
-p DiffMatcher::difference(1, 1)
-# => nil
+Using plain ruby objects for *expected* produces the following diffs:
 ```
++-------------+--------+-------------+
+| expected    | actual | diff        |
++-------------+--------+-------------+
+| 1           | 2      | - 1+ 2      |
+| 1           | 1      |             |
+| String      | 1      | - String+ 1 |
+| String      | "1"    |             |
+| /[a-z]/     | 1      | -/[a-z]/+ 1 |
+| /[a-z]/     | "a"    |             |
+| 1..3        | 4      | - 1..3+ 4   |
+| 1..3        | 3      |             |
+| is_boolean  | true   |             |
++-------------+--------+-------------+
 
-When `actual` != `expected`
-
-``` ruby
-puts DiffMatcher::difference(1, 2)
-# => - 1+ 2
-# => Where, - 1 missing, + 1 additional
-```
-
-When `actual` is an instance of the `expected`
-
-``` ruby
-p DiffMatcher::difference(String, '1')
-# => nil
-```
-
-When `actual` is a string that matches the `expected` regex
-
-``` ruby
-p DiffMatcher::difference(/[a-z]/, "a")
-# => nil
-```
-
-When `actual` is a fixnum that matches the `expected` range
-
-``` ruby
-p DiffMatcher::difference(1..3, 3)
-# => nil
-```
-
-When `actual` is passed to an `expected` proc and it returns true
-
-``` ruby
-is_boolean = lambda { |x| [FalseClass, TrueClass].include? x.class }
-p DiffMatcher::difference(is_boolean, true)
-# => nil
+Where:
+  is_boolean = lambda { |x| [FalseClass, TrueClass].include? x.class }
 ```
 
 When `actual` is missing one of the `expected` values
 
 ``` ruby
-puts DiffMatcher::difference([1, 2], [1])
+expected = [1, 2]
+puts DiffMatcher::difference(expected, [1])
 # => [
 # =>   1
 # => - 2
@@ -108,7 +85,8 @@ puts DiffMatcher::difference([1, 2], [1])
 When `actual` has additional values to the `expected`
 
 ``` ruby
-puts DiffMatcher::difference([1], [1, 2])
+expected = [1]
+puts DiffMatcher::difference(expected, [1, 2])
 # => [
 # =>   1
 # => + 2
