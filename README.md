@@ -4,27 +4,30 @@ DiffMatcher
 [![build status](http://travis-ci.org/playup/diff_matcher.png)](http://travis-ci.org/playup/diff_matcher)
 [![still maintained](http://stillmaintained.com/playupchris/diff_matcher.png)](http://stillmaintained.com/playupchris/diff_matcher)
 
-Generates a diff by matching against expected values, classes, regexes and/or procs.
+Generates a diff by matching against user-defined matchers written in ruby.
 
-DiffMatcher performs recursive matches on values contained in hashes, arrays and combinations thereof.
+DiffMatcher matches input data (eg. from a JSON API) against values,
+ranges, classes, regexes, procs, custom matchers and/or easily composed,
+nested combinations thereof to produce an easy to read diff string.
 
-Values in a containing object match when:
+Actual input values are matched against expected matchers in the following way:
 
 ``` ruby
 actual.is_a? expected  # when expected is a class
 expected.match actual  # when expected is a regexp
 expected.call actual   # when expected is a proc
 actual == expected     # when expected is anything else
+expected.diff actual   # when expected is a built-in DiffMatcher
 ```
 
-Example:
+Using these building blocks, more complicated nested matchers can be
+composed.
+eg.
 
 ``` ruby
-puts DiffMatcher::difference(
-  { :a=>{ :a1=>11          }, :b=>[ 21, 22 ], :c=>/\d/, :d=>Fixnum, :e=>lambda { |x| (4..6).include? x } },
-  { :a=>{ :a1=>10, :a2=>12 }, :b=>[ 21     ], :c=>'3' , :d=>4     , :e=>5                                },
-  :color_scheme=>:white_background
-)
+expected = { :a=>{ :a1=>11          }, :b=>[ 21, 22 ], :c=>/\d/, :d=>Fixnum, :e=>lambda { |x| (4..6).include? x } },
+actual   = { :a=>{ :a1=>10, :a2=>12 }, :b=>[ 21     ], :c=>'3' , :d=>4     , :e=>5                                },
+puts DiffMatcher::difference(expected, actual, :color_scheme=>:white_background)
 ```
 
 ![example output](https://raw.github.com/playup/diff_matcher/master/doc/diff_matcher.gif)
@@ -42,22 +45,24 @@ Usage
 ``` ruby
 require 'diff_matcher'
 
-DiffMatcher::difference(actual, expected, opts={})
+DiffMatcher::difference(expected, actual, opts={})
 ```
 
-When `expected` != `actual`
+#### Using plain ruby objects for *expected*
+
+When `actual` == `expected`
+
+``` ruby
+p DiffMatcher::difference(1, 1)
+# => nil
+```
+
+When `actual` != `expected`
 
 ``` ruby
 puts DiffMatcher::difference(1, 2)
 # => - 1+ 2
 # => Where, - 1 missing, + 1 additional
-```
-
-When `expected` == `actual`
-
-``` ruby
-p DiffMatcher::difference(1, 1)
-# => nil
 ```
 
 When `actual` is an instance of the `expected`
@@ -112,37 +117,54 @@ puts DiffMatcher::difference([1], [1, 2])
 ```
 
 
-When `expected` is a `Hash` with optional keys use a `Matcher`.
+#### Using DiffMatcher's built-in matchers for *expected*
+
+Sometimes you'll need to wrap plain ruby objects with DiffMatcher's
+built-in matchers, to provide extra matching abilities.
+
+When `expected` is a `Hash`, but has optional keys, wrap the `Hash` with
+a built-in `Matcher`
 
 ``` ruby
-puts DiffMatcher::difference(
-  DiffMatcher::Matcher.new({:name=>String, :age=>Fixnum}, :optional_keys=>[:age]),
-  {:name=>0}
-)
+exp = {:name=>String, :age=>Fixnum}
+expected = DiffMatcher::Matcher.new(exp, :optional_keys=>[:age])
+puts DiffMatcher::difference(expected, {:name=>0})
 {
   :name=>- String+ 0
 }
 Where, - 1 missing, + 1 additional
 ```
 
-
-When `expected` can take multiple forms use some `Matcher`s `||`ed together.
+When multiple `expected` values can be matched against, simply wrap them
+in `Matcher`s and `||` them together
 
 ``` ruby
-puts DiffMatcher::difference(DiffMatcher::Matcher.new(Fixnum) || DiffMatcher.new(Float), "3")
+exp1 = Fixnum
+exp2 = Float
+expected = DiffMatcher::Matcher.new(exp1) || DiffMatcher::Matcher.new(exp2)
+puts DiffMatcher::difference(expected, "3")
 - Float+ "3"
 Where, - 1 missing, + 1 additional
 ```
-(NB. `DiffMatcher::Matcher[Fixnum, Float]` can be used as a shortcut for 
-     `DiffMatcher::Matcher.new(Fixnum) || DiffMatcher.new(Float)`
-)
 
-
-When `actual` is an array of *unknown* size use an `AllMatcher` to match
-against *all* the elements in the array.
+Or to do the same thing using a shorter syntax
 
 ``` ruby
-puts DiffMatcher::difference(DiffMatcher::AllMatcher.new(Fixnum), [1, 2, "3"])
+exp1 = Fixnum
+exp2 = Float
+expected = DiffMatcher::Matcher[exp1, exp2]
+puts DiffMatcher::difference(expected, "3")
+- Float+ "3"
+Where, - 1 missing, + 1 additional
+```
+
+When `actual` is an array of *unknown* size use an `AllMatcher` to match
+against *all* the elements in the array
+
+``` ruby
+exp = Fixnum
+expected = DiffMatcher::AllMatcher.new(exp)
+puts DiffMatcher::difference(expected, [1, 2, "3"])
 [
   : 1,
   : 2,
@@ -157,7 +179,9 @@ against *all* the elements in the array adhering to the limits of `:min`
 and or `:max` or `:size` (where `:size` is a Fixnum or range of Fixnum).
 
 ``` ruby
-puts DiffMatcher::difference(DiffMatcher::AllMatcher.new(Fixnum, :min=>3), [1, 2])
+exp = Fixnum
+expected = DiffMatcher::AllMatcher.new(exp, :min=>3)
+puts DiffMatcher::difference(expected, [1, 2])
 [
   : 1,
   : 2,
@@ -167,7 +191,9 @@ Where, - 1 missing, : 2 match_class
 ```
 
 ``` ruby
-puts DiffMatcher::difference(DiffMatcher::AllMatcher.new(Fixnum, :size=>3..5), [1, 2])
+exp = Fixnum
+expected = DiffMatcher::AllMatcher.new(exp, :size=>3..5)
+puts DiffMatcher::difference(expected, [1, 2])
 [
   : 1,
   : 2,
@@ -177,16 +203,15 @@ Where, - 1 missing, : 2 match_class
 ```
 
 When `actual` is an array of unknown size *and* `expected` can take
-multiple forms use a `Matcher` inside of an `AllMatcher` to match
-against *all* the elements in the array in any of the forms.
+multiple forms use a `Matcher` to `||` them together, then wrap that
+with an `AllMatcher` to match against *all* the elements in the array in
+any of the forms.
 
 ``` ruby
-puts DiffMatcher::difference(
-  DiffMatcher::AllMatcher.new(
-    DiffMatcher::Matcher[Fixnum, Float]
-  ),
-  [1, 2.00, "3"]
-)
+exp1 = Fixnum
+exp2 = Float
+expected = DiffMatcher::AllMatcher.new( DiffMatcher::Matcher[Fixnum, Float] )
+puts DiffMatcher::difference(expected, [1, 2.00, "3"])
 [
   | 1,
   | 2.0,
@@ -214,7 +239,7 @@ puts DiffMatcher::difference([Fixnum, 2], [1], :quiet=>true)
 # => Where, - 1 missing
 ```
 
-`:html_output=>true` will convert ansii escape codes to html spans
+`:html_output=>true` will convert ansii escape colour codes to html spans
 
 ``` ruby
 puts DiffMatcher::difference(1, 2, :html_output=>true)
@@ -226,7 +251,9 @@ Where, <span style="color:red">- <b>1 missing</b></span>, <span style="color:yel
 
 #### Prefixes
 
-The items shown in a difference are prefixed as follows:
+A difference string is similar in appereance to the `.inspect` of plain
+ruby objects, however the matched elements it contains are prefixed
+in the following way:
 
     missing       => "- "
     additional    => "+ "
@@ -376,13 +403,14 @@ Finished in 0.00601 seconds
 Contributing
 ---
 
-Fork, write some tests and send a pull request (bonus points for topic branches).
+Think up something DiffMatcher *can't* do!  :)
+Fork, write some tests and send a pull request (bonus points for topic branches), or just submit an issue.
 
 
 Status
 ---
 
-Our company is using this gem to test our JSON API which has got it to a stable v1.0.0 release.
+Our company is using this gem to test our JSON API which has got above and beyond a stable v1.0.0 release.
 
 There's a [pull request](http://github.com/rspec/rspec-expectations/pull/79) to use this gem in a `be_hash_matching` 
 [rspec matcher](https://www.relishapp.com/rspec/rspec-expectations).

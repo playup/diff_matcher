@@ -11,16 +11,11 @@ Gem::Specification.new do |s|
   s.email         = "chris@playup.com"
   s.homepage      = "http://github.com/playup/diff_matcher"
 
-  s.summary       = %q{Generates a diff by matching against expected values, classes, regexes and/or procs.}
+  s.summary       = %q{Generates a diff by matching against user-defined matchers written in ruby.}
   s.description   = <<EOF
-DiffMatcher performs recursive matches on values contained in hashes, arrays and combinations thereof.
-
-Values in a containing object match when:
-
-    - actual == expected
-    - actual.is_a? expected  # when expected is a class
-    - expected.match actual  # when expected is a regexp
-    - expected.call actual   # when expected is a proc
+DiffMatcher matches input data (eg. from a JSON API) against values,
+ranges, classes, regexes, procs, custom matchers and/or easily composed,
+nested combinations thereof to produce an easy to read diff string.
 EOF
 
   s.files         = `git ls-files`.split("\n")
