@@ -48,9 +48,9 @@ require 'diff_matcher'
 DiffMatcher::difference(expected, actual, opts={})
 ```
 
-#### Using plain ruby objects for *expected*
+#### Simple matchers
 
-Using plain ruby objects for *expected* produces the following diffs:
+Using plain ruby objects produces the following diffs:
 ```
 +-------------+--------+-------------+
 | expected    | actual | diff        |
@@ -95,7 +95,7 @@ puts DiffMatcher::difference(expected, [1, 2])
 ```
 
 
-#### Using DiffMatcher's built-in matchers for *expected*
+#### More complicated matchers
 
 Sometimes you'll need to wrap plain ruby objects with DiffMatcher's
 built-in matchers, to provide extra matching abilities.
@@ -198,23 +198,64 @@ puts DiffMatcher::difference(expected, [1, 2.00, "3"])
 # => Where, - 1 missing, + 1 additional, | 2 match_matcher
 ```
 
-### Options
+### Matcher options
 
-`:ignore_additional=>true` will match even if `actual` has additional items
+Matcher options can be passed to `DiffMatcher::difference` or `DiffMatcher::Matcher#diff`
+or instances of `DiffMatcher::Matcher`
+
+First consider:
 
 ``` ruby
-p DiffMatcher::difference([1], [1, 2], :ignore_additional=>true)
+expected = DiffMatcher::Matcher.new([1])
+puts expected.diff([1, 2])
+# => [
+# =>   1,
+# => + 2
+# => ]
+```
+
+Using `:ignore_additional=>true` will now match even though `actual` has additional items.
+
+It can be used in the following ways:
+
+``` ruby
+expected = DiffMatcher::Matcher.new([1])
+puts expected.diff([1, 2], :ignore_additional=>true)
 # => nil
 ```
 
-`:quiet=>true` shows only missing and additional items in the output
+or
 
 ``` ruby
-puts DiffMatcher::difference([Fixnum, 2], [1], :quiet=>true)
+expected = DiffMatcher::Matcher.new([1])
+puts DiffMatcher::difference(expected, [1, 2], :ignore_additional=>true)
+# => nil
+```
+
+or
+
+``` ruby
+expected = DiffMatcher::Matcher.new([1], :ignore_additional=>true)
+puts expected.diff([1, 2])
+# => nil
+```
+
+Now consider:
+
+``` ruby
+puts DiffMatcher::Matcher.new([Fixnum, 2]).diff([1])
+# => [
+# =>   : 1,
+# => - 2
+# => ]
+```
+
+Using `:quiet=>true` will only show missing and additional items in the output
+``` ruby
+puts DiffMatcher::Matcher.new([Fixnum, 2]).diff([1], :quiet=>true)
 # => [
 # => - 2
 # => ]
-# => Where, - 1 missing
 ```
 
 `:html_output=>true` will convert ansii escape colour codes to html spans
