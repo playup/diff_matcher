@@ -48,7 +48,6 @@ module DiffMatcher
     end
   end
 
-  class NotAnArray < Exception; end
   class AllMatcher < Matcher
     def expected(e, actual)
       opts = expected_opts(e)
