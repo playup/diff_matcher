@@ -751,6 +751,27 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
       end
     end
 
+    describe "it shows matches in color when color is configured in Difference" do
+      before do
+        DiffMatcher::Difference.configure do |config|
+          config.color_enabled = true
+        end
+      end
+
+      it_behaves_like "a diff matcher", expected, same, different,
+        <<-EOF
+        \e[0m[
+        \e[0m  \e[31m- \e[1m1\e[0m\e[35m+ \e[1m0\e[0m,
+        \e[0m  2,
+        \e[0m  \e[32m~ \e[0m"\e[32m(\e[1m3\e[0m\e[32m)\e[0m"\e[0m,
+        \e[0m  \e[34m: \e[1m4\e[0m,
+        \e[0m  \e[36m. \e[1m5\e[0m,
+        \e[0m  \e[36m{ \e[1m6\e[0m
+        \e[0m]
+        Where, \e[31m- \e[1m1 missing\e[0m, \e[35m+ \e[1m1 additional\e[0m, \e[32m~ \e[1m1 match_regexp\e[0m, \e[34m: \e[1m1 match_class\e[0m, \e[36m. \e[1m1 match_range\e[0m, \e[36m{ \e[1m1 match_proc\e[0m
+        EOF
+    end
+
     describe "it shows matches in html" do
       it_behaves_like "a diff matcher", expected, same, different,
         <<-EOF , :color_scheme => :white_background, :html_output=>true

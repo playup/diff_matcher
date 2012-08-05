@@ -108,8 +108,16 @@ module DiffMatcher
         @color_scheme = color_schemes[value]
       end
 
+      def color_enabled=(value)
+        @color_enabled = value
+      end
+
       def color_enabled
         @color_enabled.nil? ? !!@color_scheme : @color_enabled
+      end
+
+      def configure(&block)
+        block.call(self)
       end
     end
 

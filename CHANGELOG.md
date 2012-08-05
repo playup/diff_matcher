@@ -1,5 +1,9 @@
 # Changelog
 
+### v2.4.0
+
+  Add class configuration of Difference from a block
+
 ### v2.3.3
 
   Allow HTML output using `:html_output=>true` option
