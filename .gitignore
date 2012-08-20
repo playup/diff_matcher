@@ -2,3 +2,5 @@ coverage
 pkg
 Gemfile.lock
 .rvmrc
+gems
+bin
