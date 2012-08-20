@@ -1,6 +1,6 @@
-source "http://rubygems.org"
+source :rubygems
 
-#gemspec
+gemspec
 
 group :development do
   gem "rake" , "~> 0.9"
