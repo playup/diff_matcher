@@ -133,7 +133,7 @@ describe "DiffMatcher::Matcher[expected].diff(actual, opts)" do
         2
 
       it_behaves_like "a diff matcher", expected, same, different,
-        "\e[31m- \e[1m1\e[0m\e[33m+ \e[1m2\e[0m", {}
+        "\e[31m- \e[1m1\e[0m\e[33m+ \e[1m2\e[0m"
     end
   end
 
@@ -163,7 +163,7 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
         2
 
       it_behaves_like "a diff matcher", expected, same, different,
-        <<-EOF, {}
+        <<-EOF
         - 1+ 2
         Where, - 1 missing, + 1 additional
         EOF
@@ -176,7 +176,7 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
         "b"
 
       it_behaves_like "a diff matcher", expected, same, different,
-        <<-EOF, {}
+        <<-EOF
         - "a"+ "b"
         Where, - 1 missing, + 1 additional
         EOF
@@ -185,7 +185,7 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
         different = 0
 
         it_behaves_like "a diff matcher", expected, same, different,
-          <<-EOF, {}
+          <<-EOF
           - "a"+ 0
           Where, - 1 missing, + 1 additional
           EOF
@@ -195,7 +195,7 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
         different = nil
 
         it_behaves_like "a diff matcher", expected, same, different,
-          <<-EOF, {}
+          <<-EOF
           - "a"+ nil
           Where, - 1 missing, + 1 additional
           EOF
@@ -209,7 +209,7 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
         false
 
       it_behaves_like "a diff matcher", expected, same, different,
-        <<-EOF, {}
+        <<-EOF
         - nil+ false
         Where, - 1 missing, + 1 additional
         EOF
@@ -222,7 +222,7 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
         [ 2 ]
 
       it_behaves_like "a diff matcher", expected, same, different,
-        <<-EOF, {}
+        <<-EOF
         [
           - 1+ 2
         ]
@@ -335,7 +335,7 @@ describe "DiffMatcher::difference(expected, actual, opts)" do
         ArrayChild[ 2 ]
 
       it_behaves_like "a diff matcher", expected, same, different,
-        <<-EOF, {}
+        <<-EOF
         [
           - 1+ 2
         ]
