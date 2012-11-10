@@ -353,34 +353,40 @@ do pattern matching and also looks like a good alternative to diff_matcher, it h
 
 Use with rspec
 ---
-To use with rspec create the following custom matcher:
+To use with rspec, create a custom matcher. The following example matcher works with rspec-1.2.4 and up.
 
 ``` ruby
 require 'diff_matcher'
 
-module RSpec
-  module Matchers
-    class BeMatching
-      include BaseMatcher
+# Uses the diff_matcher gem to provide advanced matching abilities, along with nice visual representation of the
+# diff between actual and expected. The functionality set is very helpful for comparing hashes.
+#
+# Usage examples:
+#  it { should be_matching(my_var) }
+#  it { should be_matching(my_var).with_options(ignore_additional: true) }
+#
+# Options: by default, color_enabled is controlled by Rspec, and quiet is set to true.
+RSpec::Matchers.define :be_matching do |expected|
+  match do |actual|
+    options = { color_enabled: RSpec::configuration.color_enabled?, quiet: true }.merge(@options || {})
+    @difference = DiffMatcher::Difference.new(expected, actual, options)
+    @difference.matching?
+  end
 
-      def initialize(expected, opts)
-        @expected = expected
-        @opts = opts.update(:color_enabled=>RSpec::configuration.color_enabled?)
-      end
+  chain :with_options do |options|
+    @options = options
+  end
 
-      def matches?(actual)
-        @difference = DiffMatcher::Difference.new(expected, actual, @opts)
-        @difference.matching?
-      end
+  failure_message_for_should do |actual|
+    "diff is:\n" + @difference.to_s
+  end
 
-      def failure_message_for_should
-        @difference.to_s
-      end
-    end
+  failure_message_for_should_not do |actual|
+    "diff is:\n" + @difference.to_s
+  end
 
-    def be_matching(expected, opts={})
-      Matchers::BeMatching.new(expected, opts)
-    end
+  description do
+    "match via DiffMatcher #{expected}" + (@options.blank? ? '' : " with options: #{@options}")
   end
 end
 ```
@@ -392,7 +398,7 @@ describe "hash matcher" do
   subject { { :a=>1, :b=>2, :c=>'3', :d=>4, :e=>"additional stuff" } }
   let(:expected) { { :a=>1, :b=>Fixnum, :c=>/[0-9]/, :d=>lambda { |x| (3..5).include?(x) } } }
 
-  it { should be_matching(expected, :ignore_additional=>true) }
+  it { should be_matching(expected).with_options(:ignore_additional=>true) }
   it { should be_matching(expected) }
 end
 ```
